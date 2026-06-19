@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snooker Scorer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+  }
+
+  .setup-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 20px;
+  }
+
+  .setup-screen h1 {
+    font-size: 3rem;
+    color: #e94560;
+    text-shadow: 0 0 20px rgba(233,69,96,0.5);
+  }
+
+  .setup-screen input {
+    padding: 12px 20px;
+    font-size: 1.2rem;
+    border: 2px solid #e94560;
+    border-radius: 8px;
+    background: #16213e;
+    color: #e0e0e0;
+    width: 300px;
+    text-align: center;
+  }
+
+  .setup-screen button, .btn {
+    padding: 12px 30px;
+    font-size: 1.1rem;
+    border: none;
+    border-radius: 8px;
+    background: #e94560;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .setup-screen button:hover, .btn:hover {
+    background: #c73652;
+    transform: scale(1.05);
+  }
+
+  .game-screen { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; }
+
+  .scoreboard {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: linear-gradient(135deg, #16213e, #0f3460);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+
+  .player-score {
+    text-align: center;
+    flex: 1;
+  }
+
+  .player-score.active {
+    border: 2px solid #e94560;
+    border-radius: 12px;
+    padding: 10px;
+    background: rgba(233,69,96,0.1);
+  }
+
+  .player-score .name {
+    font-size: 1.3rem;
+    margin-bottom: 8px;
+    color: #a0a0c0;
+  }
+
+  .player-score .score {
+    font-size: 3.5rem;
+    font-weight: bold;
+    color: #fff;
+  }
+
+  .player-score.active .score { color: #e94560; }
+
+  .break-display {
+    text-align: center;
+    font-size: 1.1rem;
+    color: #f0a020;
+    margin-top: 5px;
+  }
+
+  .vs {
+    font-size: 1.5rem;
+    color: #e94560;
+    font-weight: bold;
+    padding: 0 20px;
+  }
+
+  .remaining-balls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+
+  .ball {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    user-select: none;
+  }
+
+  .ball:hover { transform: scale(1.15); }
+  .ball.potted { opacity: 0.25; transform: scale(0.85); cursor: not-allowed; }
+  .ball.potted:hover { transform: scale(0.85); }
+
+  .ball-red {
+    background: radial-gradient(circle at 35% 35%, #ff6b6b, #c0392b, #7b1a1a);
+    box-shadow: inset -3px -3px 8px rgba(0,0,0,0.4), inset 3px 3px 8px rgba(255,255,255,0.2), 0 4px 12px rgba(192,57,43,0.5);
+  }
+  .ball-yellow {
+    background: radial-gradient(circle at 35% 35%, #ffe066, #f1c40f, #b7950b);
+    box-shadow: inset -3px -3px 8px rgba(0,0,0,0.3), inset 3px 3px 8px rgba(255,255,255,0.3), 0 4px 12px rgba(241,196,15,0.5);
+    color: #333; text-shadow: none;
+  }
+  .ball-green {
+    background: radial-gradient(circle at 35% 35%, #6bff6b, #27ae60, #1a7a3a);
+    box-shadow: inset -3px -3px 8px rgba(0,0,0,0.3), inset 3px 3px 8px rgba(255,255,255,0.2), 0 4px 12px rgba(39,174,96,0.5);
+  }
+  .ball-brown {
+    background: radial-gradient(circle at 35% 35%, #c9956b, #8b5e3c, #5c3a1e);
+    box-shadow: inset -3px -3px 8px rgba(0,0,0,0.4), inset 3px 3px 8px rgba(255,255,255,0.15), 0 4px 12px rgba(139,94,60,0.5);
+  }
+  .ball-blue {
+    background: radial-gradient(circle at 35% 35%, #6bb5ff, #2980b9, #1a5276);
+    box-shadow: inset -3px -3px 8px rgba(0,0,0,0.3), inset 3px 3px 8px rgba(255,255,255,0.2), 0 4px 12px rgba(41,128,185,0.5);
+  }
+  .ball-pink {
+    background: radial-gradient(circle at 35% 35%, #ff8ec4, #e91e8c, #a01560);
+    box-shadow: inset -3px -3px 8px rgba(0,0,0,0.3), inset 3px 3px 8px rgba(255,255,255,0.2), 0 4px 12px rgba(233,30,140,0.5);
+  }
+  .ball-black {
+    background: radial-gradient(circle at 35% 35%, #555, #222, #000);
+    box-shadow: inset -3px -3px 8px rgba(0,0,0,0.5), inset 3px 3px 8px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.5);
+  }
+
+  .ball .count {
+    position: absolute;
+    bottom: -18px;
+    font-size: 0.75rem;
+    color: #a0a0c0;
+    text-shadow: none;
+  }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    font-size: 0.95rem;
+  }
+
+  .btn-secondary { background: #555; }
+  .btn-secondary:hover { background: #666; }
+  .btn-warning { background: #e67e22; }
+  .btn-warning:hover { background: #d35400; }
+  .btn-danger { background: #c0392b; }
+  .btn-danger:hover { background: #a93226; }
+  .btn-success { background: #27ae60; }
+  .btn-success:hover { background: #219a52; }
+
+  .action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 15px 0;
+    flex-wrap: wrap;
+  }
+
+  .foul-section {
+    text-align: center;
+    margin: 15px 0;
+  }
+
+  .foul-section h3 { margin-bottom: 10px; color: #e94560; }
+
+  .foul-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .foul-buttons .btn { padding: 8px 16px; font-size: 0.85rem; }
+
+  .history-section {
+    margin-top: 30px;
+    background: #16213e;
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .history-section h2 {
+    color: #e94560;
+    margin-bottom: 15px;
+    font-size: 1.3rem;
+  }
+
+  .history-list {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #1a1a2e;
+    font-size: 0.9rem;
+  }
+
+  .history-item:last-child { border-bottom: none; }
+
+  .history-item .event { flex: 1; }
+  .history-item .points { color: #f0a020; font-weight: bold; min-width: 40px; text-align: right; }
+  .history-item .time { color: #666; font-size: 0.75rem; min-width: 60px; text-align: right; }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.active { display: flex; }
+
+  .modal {
+    background: #16213e;
+    border-radius: 16px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+  }
+
+  .modal h2 { color: #e94560; margin-bottom: 20px; }
+  .modal p { margin-bottom: 20px; font-size: 1.1rem; }
+  .modal .btn { margin: 5px; }
+
+  .game-over {
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #e94560, #c0392b);
+    border-radius: 12px;
+    margin: 20px 0;
+    display: none;
+  }
+
+  .game-over h2 { font-size: 2rem; margin-bottom: 10px; }
+  .game-over p { font-size: 1.3rem; }
+
+  .free-ball-section {
+    text-align: center;
+    margin: 10px 0;
+    display: none;
+  }
+
+  .free-ball-section.active { display: block; }
+
+  .ball-select-grid {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .mini-ball {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .mini-ball:hover { transform: scale(1.2); }
+
+  @media (max-width: 600px) {
+    .scoreboard { flex-direction: column; gap: 10px; }
+    .player-score .score { font-size: 2.5rem; }
+    .ball { width: 38px; height: 38px; font-size: 0.7rem; }
+    .setup-screen h1 { font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="setup-screen" id="setupScreen">
+  <h1>🎱 Snooker Scorer</h1>
+  <input type="text" id="player1Name" placeholder="Player 1 Name" />
+  <input type="text" id="player2Name" placeholder="Player 2 Name" />
+  <button onclick="startGame()">Start Game</button>
+</div>
+
+<div class="game-screen" id="gameScreen">
+  <div class="scoreboard">
+    <div class="player-score active" id="player1Card">
+      <div class="name" id="player1Display">Player 1</div>
+      <div class="score" id="player1Score">0</div>
+      <div class="break-display" id="player1Break"></div>
+    </div>
+    <div class="vs">VS</div>
+    <div class="player-score" id="player2Card">
+      <div class="name" id="player2Display">Player 2</div>
+      <div class="score" id="player2Score">0</div>
+      <div class="break-display" id="player2Break"></div>
+    </div>
+  </div>
+
+  <div class="game-over" id="gameOverBanner">
+    <h2 id="winnerText"></h2>
+    <p id="winnerScore"></p>
+  </div>
+
+  <h3 style="text-align:center; margin: 15px 0 5px; color:#a0a0c0;">Ball Colors &mdash; Click to Pot</h3>
+  <div class="remaining-balls" id="ballsContainer"></div>
+
+  <div class="free-ball-section" id="freeBallSection">
+    <h3 style="color:#f0a020;">Free Ball &mdash; Select Value</h3>
+    <div class="ball-select-grid" id="freeBallGrid"></div>
+  </div>
+
+  <div class="foul-section">
+    <h3>Foul (awarded to opponent)</h3>
+    <div class="foul-buttons">
+      <button class="btn btn-warning" onclick="recordFoul(4)">4 pts</button>
+      <button class="btn btn-warning" onclick="recordFoul(5)">5 pts</button>
+      <button class="btn btn-warning" onclick="recordFoul(6)">6 pts</button>
+      <button class="btn btn-warning" onclick="recordFoul(7)">7 pts</button>
+      <button class="btn btn-warning" onclick="recordFoul(customFoul())">Custom</button>
+    </div>
+  </div>
+
+  <div class="action-buttons">
+    <button class="btn btn-secondary" onclick="switchPlayer()">Switch Turn</button>
+    <button class="btn btn-secondary" onclick="undoLastAction()">Undo</button>
+    <button class="btn btn-danger" onclick="confirmEndGame()">End Game</button>
+    <button class="btn btn-success" onclick="newGame()">New Game</button>
+  </div>
+
+  <div class="history-section">
+    <h2>📋 Game History</h2>
+    <div class="history-list" id="historyList"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal">
+    <h2 id="modalTitle">Confirm</h2>
+    <p id="modalMessage"></p>
+    <div>
+      <button class="btn btn-danger" id="modalConfirm">Confirm</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATABASE ABSTRACTION LAYER
+// Swap IndexedDB implementation with any other by implementing the same interface
+// ============================================================
+
+const DB = (() => {
+  const DB_NAME = 'snooker_scorer';
+  const DB_VERSION = 1;
+  const GAMES_STORE = 'games';
+  const FRAMES_STORE = 'frames';
+
+  let db = null;
+
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      if (db) { resolve(db); return; }
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = (e) => {
+        const database = e.target.result;
+        if (!database.objectStoreNames.contains(GAMES_STORE)) {
+          const store = database.createObjectStore(GAMES_STORE, { keyPath: 'id', autoIncrement: true });
+          store.createIndex('date', 'date', { unique: false });
+        }
+        if (!database.objectStoreNames.contains(FRAMES_STORE)) {
+          const store = database.createObjectStore(FRAMES_STORE, { keyPath: 'id', autoIncrement: true });
+          store.createIndex('gameId', 'gameId', { unique: false });
+        }
+      };
+      req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+      req.onerror = (e) => reject(e.target.error);
+    });
+  }
+
+  function tx(storeName, mode = 'readonly') {
+    return openDB().then(database => {
+      const transaction = database.transaction(storeName, mode);
+      return transaction.objectStore(storeName);
+    });
+  }
+
+  function add(storeName, data) {
+    return tx(storeName, 'readwrite').then(store => {
+      return new Promise((resolve, reject) => {
+        const req = store.add(data);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    });
+  }
+
+  function getAll(storeName) {
+    return tx(storeName).then(store => {
+      return new Promise((resolve, reject) => {
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    });
+  }
+
+  function getByIndex(storeName, indexName, value) {
+    return tx(storeName).then(store => {
+      const index = store.index(indexName);
+      return new Promise((resolve, reject) => {
+        const req = index.getAll(value);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    });
+  }
+
+  function put(storeName, data) {
+    return tx(storeName, 'readwrite').then(store => {
+      return new Promise((resolve, reject) => {
+        const req = store.put(data);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    });
+  }
+
+  function deleteRecord(storeName, key) {
+    return tx(storeName, 'readwrite').then(store => {
+      return new Promise((resolve, reject) => {
+        const req = store.delete(key);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    });
+  }
+
+  function clearStore(storeName) {
+    return tx(storeName, 'readwrite').then(store => {
+      return new Promise((resolve, reject) => {
+        const req = store.clear();
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    });
+  }
+
+  return { openDB, add, getAll, getByIndex, put, deleteRecord, clearStore, GAMES_STORE, FRAMES_STORE };
+})();
+
+// ============================================================
+// GAME LOGIC
+// ============================================================
+
+const BALLS_CONFIG = [
+  { color: 'red',    cssClass: 'ball-red',    points: 1, count: 15 },
+  { color: 'yellow', cssClass: 'ball-yellow', points: 2, count: 1 },
+  { color: 'green',  cssClass: 'ball-green',  points: 3, count: 1 },
+  { color: 'brown',  cssClass: 'ball-brown',  points: 4, count: 1 },
+  { color: 'blue',   cssClass: 'ball-blue',   points: 5, count: 1 },
+  { color: 'pink',   cssClass: 'ball-pink',   points: 6, count: 1 },
+  { color: 'black',  cssClass: 'ball-black',  points: 7, count: 1 },
+];
+
+let gameState = {
+  player1: '',
+  player2: '',
+  currentPlayer: 1,
+  scores: [0, 0],
+  currentBreak: [0, 0],
+  balls: {},   // color -> remaining count
+  history: [],
+  redsRemaining: 15,
+  lastWasRed: false,
+  freeBall: false,
+  gameOver: false,
+  frameId: null,
+};
+
+function initBalls() {
+  gameState.balls = {};
+  BALLS_CONFIG.forEach(b => { gameState.balls[b.color] = b.count; });
+  gameState.redsRemaining = 15;
+}
+
+function startGame() {
+  const p1 = document.getElementById('player1Name').value.trim() || 'Player 1';
+  const p2 = document.getElementById('player2Name').value.trim() || 'Player 2';
+
+  gameState.player1 = p1;
+  gameState.player2 = p2;
+  gameState.currentPlayer = 1;
+  gameState.scores = [0, 0];
+  gameState.currentBreak = [0, 0];
+  gameState.history = [];
+  gameState.lastWasRed = false;
+  gameState.freeBall = false;
+  gameState.gameOver = false;
+
+  initBalls();
+
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'block';
+  document.getElementById('player1Display').textContent = p1;
+  document.getElementById('player2Display').textContent = p2;
+  document.getElementById('gameOverBanner').style.display = 'none';
+
+  saveFrame();
+  render();
+}
+
+function saveFrame() {
+  const frameData = {
+    player1: gameState.player1,
+    player2: gameState.player2,
+    scores: [...gameState.scores],
+    balls: { ...gameState.balls },
+    redsRemaining: gameState.redsRemaining,
+    currentPlayer: gameState.currentPlayer,
+    currentBreak: [...gameState.currentBreak],
+    lastWasRed: gameState.lastWasRed,
+    freeBall: gameState.freeBall,
+    history: JSON.parse(JSON.stringify(gameState.history)),
+    date: new Date().toISOString(),
+  };
+
+  if (gameState.frameId) {
+    frameData.id = gameState.frameId;
+    DB.put(DB.FRAMES_STORE, frameData).then(id => { gameState.frameId = id; });
+  } else {
+    DB.add(DB.FRAMES_STORE, frameData).then(id => { gameState.frameId = id; });
+  }
+}
+
+function getBallConfig(color) {
+  return BALLS_CONFIG.find(b => b.color === color);
+}
+
+function potBall(color) {
+  if (gameState.gameOver) return;
+
+  const config = getBallConfig(color);
+  if (!config || gameState.balls[color] <= 0) return;
+
+  // Free ball: any color can be potted as a red (worth 1) or as its value
+  if (gameState.freeBall) {
+    handleFreeBall(color);
+    return;
+  }
+
+  // Normal play validation
+  const allColorsGone = BALLS_CONFIG.slice(1).every(b => gameState.balls[b.color] === 0);
+
+  if (gameState.redsRemaining > 0) {
+    // Must pot red first if last wasn't red
+    if (!gameState.lastWasRed && color !== 'red') return;
+    if (color === 'red') {
+      gameState.balls['red']--;
+      gameState.redsRemaining--;
+      addPoints(config.points, color);
+      gameState.lastWasRed = true;
+    } else {
+      if (!gameState.lastWasRed) return; // must have potted red
+      gameState.balls[color]--;
+      addPoints(config.points, color);
+      gameState.lastWasRed = false;
+    }
+  } else {
+    // All reds gone — pot colors in order
+    if (color === 'red') return; // no reds left
+    const order = ['yellow', 'green', 'brown', 'blue', 'pink', 'black'];
+    for (const c of order) {
+      if (gameState.balls[c] > 0) {
+        if (color !== c) return; // must pot lowest first
+        break;
+      }
+    }
+    gameState.balls[color]--;
+    addPoints(config.points, color);
+  }
+
+  checkGameOver();
+  saveFrame();
+  render();
+}
+
+function handleFreeBall(color) {
+  const config = getBallConfig(color);
+  // Free ball is always worth 1 (treated as a red)
+  gameState.freeBall = false;
+  document.getElementById('freeBallSection').classList.remove('active');
+  addPoints(1, `free ball (${color})`);
+  // After free ball, a real red follows — so we don't decrement the color ball
+  // Actually in snooker, free ball is potted as a red, then a real red is potted
+  // Simplified: free ball = 1 point, then player continues normally
+  gameState.lastWasRed = true; // allows color next
+  saveFrame();
+  render();
+}
+
+function addPoints(points, description) {
+  const idx = gameState.currentPlayer - 1;
+  gameState.scores[idx] += points;
+  gameState.currentBreak[idx] += points;
+
+  gameState.history.push({
+    player: gameState.currentPlayer,
+    points,
+    description,
+    color: description.includes('(') ? description : null,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+function recordFoul(points) {
+  if (gameState.gameOver) return;
+  const opponent = gameState.currentPlayer === 1 ? 2 : 1;
+  const idx = opponent - 1;
+  gameState.scores[idx] += points;
+
+  // Reset current player's break
+  gameState.currentBreak[gameState.currentPlayer - 1] = 0;
+
+  gameState.history.push({
+    player: opponent,
+    points,
+    description: `foul (${points} pts)`,
+    foul: true,
+    timestamp: new Date().toISOString(),
+  });
+
+  // After foul, opponent gets ball in hand — simplified: switch to opponent
+  gameState.currentPlayer = opponent;
+  gameState.lastWasRed = false;
+
+  // Check if free ball situation (simplified: always offer free ball after foul)
+  // In real snooker, free ball only if all balls on their spots block the next ball
+  // We'll offer it as an option
+  if (gameState.redsRemaining > 0) {
+    gameState.freeBall = true;
+  }
+
+  saveFrame();
+  render();
+}
+
+function customFoul() {
+  const pts = parseInt(prompt('Foul points (4-7):', '4'));
+  if (pts >= 4 && pts <= 7) recordFoul(pts);
+}
+
+function switchPlayer() {
+  if (gameState.gameOver) return;
+  gameState.currentBreak[gameState.currentPlayer - 1] = 0;
+  gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+  gameState.lastWasRed = false;
+  gameState.freeBall = false;
+  document.getElementById('freeBallSection').classList.remove('active');
+  saveFrame();
+  render();
+}
+
+function undoLastAction() {
+  if (gameState.history.length === 0) return;
+  const last = gameState.history.pop();
+
+  // Rebuild state from history
+  // Simpler: re-init and replay all but last
+  const savedHistory = [...gameState.history];
+  initBalls();
+  gameState.scores = [0, 0];
+  gameState.currentBreak = [0, 0];
+  gameState.currentPlayer = 1;
+  gameState.lastWasRed = false;
+  gameState.freeBall = false;
+  gameState.history = [];
+
+  // Replay
+  for (const entry of savedHistory) {
+    const idx = entry.player - 1;
+    if (entry.foul) {
+      gameState.scores[idx] += entry.points;
+      gameState.currentBreak[idx] = entry.points; // simplified
+    } else {
+      gameState.scores[idx] += entry.points;
+      gameState.currentBreak[idx] += entry.points;
+      // Restore ball counts
+      if (entry.description.startsWith('free')) {
+        // don't decrement
+      } else {
+        const colorName = entry.description;
+        if (gameState.balls[colorName] !== undefined) {
+          gameState.balls[colorName]++;
+          if (colorName === 'red') gameState.redsRemaining++;
+        }
+      }
+    }
+    gameState.history.push(entry);
+  }
+
+  saveFrame();
+  render();
+}
+
+function checkGameOver() {
+  const allGone = BALLS_CONFIG.every(b => gameState.balls[b.color] === 0);
+  if (!allGone) return;
+
+  // Check if scores are tied (re-spot black)
+  if (gameState.scores[0] === gameState.scores[1]) {
+    gameState.balls['black'] = 1;
+    return;
+  }
+
+  gameState.gameOver = true;
+  const winner = gameState.scores[0] > gameState.scores[1] ? 1 : 2;
+  const winnerName = winner === 1 ? gameState.player1 : gameState.player2;
+  document.getElementById('winnerText').textContent = `🏆 ${winnerName} Wins!`;
+  document.getElementById('winnerScore').textContent = `${gameState.scores[0]} - ${gameState.scores[1]}`;
+  document.getElementById('gameOverBanner').style.display = 'block';
+
+  // Save completed game
+  DB.add(DB.GAMES_STORE, {
+    player1: gameState.player1,
+    player2: gameState.player2,
+    score1: gameState.scores[0],
+    score2: gameState.scores[1],
+    winner,
+    date: new Date().toISOString(),
+  });
+}
+
+function confirmEndGame() {
+  showModal('End Game', 'Are you sure you want to end this game?', () => {
+    gameState.gameOver = true;
+    const winner = gameState.scores[0] > gameState.scores[1] ? 1 :
+                   gameState.scores[1] > gameState.scores[0] ? 2 : 0;
+    if (winner === 0) {
+      document.getElementById('winnerText').textContent = "It's a Draw!";
+    } else {
+      const winnerName = winner === 1 ? gameState.player1 : gameState.player2;
+      document.getElementById('winnerText').textContent = `🏆 ${winnerName} Wins!`;
+    }
+    document.getElementById('winnerScore').textContent = `${gameState.scores[0]} - ${gameState.scores[1]}`;
+    document.getElementById('gameOverBanner').style.display = 'block';
+    closeModal();
+  });
+}
+
+function newGame() {
+  showModal('New Game', 'Start a new game? Current game will be saved.', () => {
+    closeModal();
+    document.getElementById('gameScreen').style.display = 'none';
+    document.getElementById('setupScreen').style.display = 'flex';
+    document.getElementById('player1Name').value = '';
+    document.getElementById('player2Name').value = '';
+  });
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+
+function render() {
+  // Scores
+  document.getElementById('player1Score').textContent = gameState.scores[0];
+  document.getElementById('player2Score').textContent = gameState.scores[1];
+
+  // Active player
+  document.getElementById('player1Card').classList.toggle('active', gameState.currentPlayer === 1);
+  document.getElementById('player2Card').classList.toggle('active', gameState.currentPlayer === 2);
+
+  // Breaks
+  document.getElementById('player1Break').textContent =
+    gameState.currentBreak[0] > 0 ? `Break: ${gameState.currentBreak[0]}` : '';
+  document.getElementById('player2Break').textContent =
+    gameState.currentBreak[1] > 0 ? `Break: ${gameState.currentBreak[1]}` : '';
+
+  // Balls
+  const container = document.getElementById('ballsContainer');
+  container.innerHTML = '';
+  BALLS_CONFIG.forEach(b => {
+    const remaining = gameState.balls[b.color];
+    const div = document.createElement('div');
+    div.className = `ball ${b.cssClass} ${remaining === 0 ? 'potted' : ''}`;
+    div.title = `${b.color} (${b.points} pts) — ${remaining} left`;
+    div.innerHTML = `${b.points}<span class="count">×${remaining}</span>`;
+    if (remaining > 0) {
+      div.onclick = () => potBall(b.color);
+    }
+    container.appendChild(div);
+  });
+
+  // Free ball section
+  document.getElementById('freeBallSection').classList.toggle('active', gameState.freeBall);
+  if (gameState.freeBall) {
+    const grid = document.getElementById('freeBallGrid');
+    grid.innerHTML = '';
+    BALLS_CONFIG.forEach(b => {
+      if (b.color === 'red') return;
+      const div = document.createElement('div');
+      div.className = `mini-ball ${b.cssClass}`;
+      div.title = `${b.color} (free ball = 1 pt)`;
+      div.onclick = () => potBall(b.color);
+      grid.appendChild(div);
+    });
+  }
+
+  // History
+  const histList = document.getElementById('historyList');
+  histList.innerHTML = '';
+  const recent = [...gameState.history].reverse().slice(0, 50);
+  recent.forEach(entry => {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    const playerName = entry.player === 1 ? gameState.player1 : gameState.player2;
+    const time = new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    div.innerHTML = `
+      <span class="event">${playerName}: ${entry.description}</span>
+      <span class="points">+${entry.points}</span>
+      <span class="time">${time}</span>
+    `;
+    histList.appendChild(div);
+  });
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+
+let modalCallback = null;
+
+function showModal(title, message, callback) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalMessage').textContent = message;
+  modalCallback = callback;
+  document.getElementById('confirmModal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('confirmModal').classList.remove('active');
+  modalCallback = null;
+}
+
+document.getElementById('modalConfirm').onclick = () => {
+  if (modalCallback) modalCallback();
+};
+
+// ============================================================
+// INIT
+// ============================================================
+
+DB.openDB().catch(console.error);
+</script>
+</body>
+</html>

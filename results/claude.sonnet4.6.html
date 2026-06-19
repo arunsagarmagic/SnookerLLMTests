@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snooker Scorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --felt: #1a5c35;
+    --felt-dark: #0f3d22;
+    --felt-light: #226b3f;
+    --cushion: #0a2e17;
+    --gold: #c8a84b;
+    --gold-light: #e8c86a;
+    --ivory: #f5f0e8;
+    --ivory-dim: #d4cfc7;
+    --text-primary: #f0ebe0;
+    --text-muted: #9ab0a0;
+    --panel-bg: rgba(10,25,15,0.85);
+    --panel-border: rgba(200,168,75,0.25);
+    --radius: 12px;
+    --red-ball: #c0392b;
+    --yellow-ball: #f1c40f;
+    --green-ball: #27ae60;
+    --brown-ball: #795548;
+    --blue-ball: #2980b9;
+    --pink-ball: #e91e8c;
+    --black-ball: #1a1a1a;
+    --white-ball: #f5f5f5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--felt-dark);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(34,107,63,0.4) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 80%, rgba(15,61,34,0.6) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem; }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .header-icon {
+    width: 44px; height: 44px;
+    background: var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .header p { font-size: 0.8rem; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 2px; }
+
+  /* ── Setup Screen ── */
+  #setup-screen {
+    max-width: 480px;
+    margin: 4rem auto;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 2.5rem;
+    backdrop-filter: blur(8px);
+  }
+  #setup-screen h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  .setup-field { margin-bottom: 1.2rem; }
+  .setup-field label { display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 6px; }
+  .setup-field input {
+    width: 100%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(200,168,75,0.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .setup-field input:focus { border-color: var(--gold); }
+  .setup-field input::placeholder { color: rgba(255,255,255,0.25); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px;
+    padding: 11px 22px;
+    border-radius: 8px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-gold {
+    background: var(--gold);
+    color: #1a1206;
+    width: 100%;
+    font-size: 1rem;
+    padding: 13px;
+    margin-top: 0.5rem;
+    letter-spacing: 0.03em;
+  }
+  .btn-gold:hover { background: var(--gold-light); transform: translateY(-1px); }
+  .btn-danger { background: rgba(192,57,43,0.85); color: #fff; font-size: 0.82rem; padding: 7px 14px; }
+  .btn-danger:hover { background: rgba(192,57,43,1); }
+  .btn-ghost { background: rgba(255,255,255,0.07); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.12); font-size: 0.82rem; padding: 7px 14px; }
+  .btn-ghost:hover { background: rgba(255,255,255,0.13); }
+  .btn-sm { font-size: 0.78rem; padding: 6px 12px; }
+
+  /* ── Game Screen ── */
+  #game-screen { display: none; }
+
+  /* Scoreboard */
+  .scoreboard {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+    backdrop-filter: blur(8px);
+  }
+  .score-player {
+    padding: 1.2rem 1.5rem;
+    transition: background 0.3s;
+  }
+  .score-player.active { background: rgba(200,168,75,0.1); }
+  .score-player.left { text-align: left; }
+  .score-player.right { text-align: right; }
+  .player-name {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .player-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3.5rem;
+    line-height: 1;
+    color: var(--ivory);
+    transition: color 0.3s;
+  }
+  .score-player.active .player-score { color: var(--gold); }
+  .player-break { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; }
+  .player-break span { color: var(--gold-light); font-weight: 600; }
+  .score-divider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 1rem;
+    border-left: 1px solid var(--panel-border);
+    border-right: 1px solid var(--panel-border);
+  }
+  .score-divider .frame-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); }
+  .score-divider .vs { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; color: rgba(200,168,75,0.4); }
+
+  /* Turn indicator */
+  .turn-bar {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8rem;
+  }
+  .turn-indicator {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--text-muted);
+  }
+  .turn-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--gold);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+  .turn-name { color: var(--gold); font-weight: 600; }
+
+  /* Ball grid */
+  .balls-section {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    backdrop-filter: blur(8px);
+  }
+  .balls-section h3 {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--text-muted); margin-bottom: 1rem;
+  }
+  .reds-row {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 1.2rem;
+  }
+  .colors-row {
+    display: flex; flex-wrap: wrap; gap: 10px;
+  }
+  .ball-btn {
+    background: none; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    transition: transform 0.12s;
+    position: relative;
+  }
+  .ball-btn:hover { transform: scale(1.12) translateY(-2px); }
+  .ball-btn:active { transform: scale(0.96); }
+  .ball-btn.potted { opacity: 0.32; cursor: default; }
+  .ball-btn.potted:hover { transform: none; }
+
+  .ball-svg {
+    display: block;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+  }
+  .ball-label {
+    font-size: 0.65rem; font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+  .ball-pts {
+    font-size: 0.7rem; font-weight: 700;
+    color: var(--gold-light);
+  }
+
+  /* Undo / foul controls */
+  .controls-row {
+    display: flex; gap: 8px; align-items: center;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  /* Foul panel */
+  .foul-panel {
+    background: var(--panel-bg);
+    border: 1px solid rgba(192,57,43,0.35);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    display: none;
+    backdrop-filter: blur(8px);
+  }
+  .foul-panel h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: #e74c3c; margin-bottom: 0.8rem; }
+  .foul-pts-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .foul-pt-btn {
+    background: rgba(192,57,43,0.2);
+    border: 1px solid rgba(192,57,43,0.4);
+    border-radius: 6px;
+    color: #e74c3c;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .foul-pt-btn:hover { background: rgba(192,57,43,0.4); }
+
+  /* History */
+  .history-section {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+  }
+  .history-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .history-header h3 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); }
+  .history-list { max-height: 240px; overflow-y: auto; }
+  .history-list::-webkit-scrollbar { width: 4px; }
+  .history-list::-webkit-scrollbar-track { background: transparent; }
+  .history-list::-webkit-scrollbar-thumb { background: rgba(200,168,75,0.3); border-radius: 2px; }
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.6rem 1.25rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.82rem;
+    animation: slideIn 0.25s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform: translateX(-8px); } to { opacity:1; transform: none; } }
+  .history-item:last-child { border-bottom: none; }
+  .history-ball-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .history-who { color: var(--text-muted); font-size: 0.75rem; min-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .history-action { flex: 1; color: var(--text-primary); }
+  .history-pts { font-weight: 600; color: var(--gold-light); font-size: 0.78rem; min-width: 32px; text-align: right; }
+  .history-pts.neg { color: #e74c3c; }
+  .history-time { color: var(--text-muted); font-size: 0.7rem; }
+  .history-empty { padding: 1.5rem; text-align: center; color: var(--text-muted); font-size: 0.82rem; }
+
+  /* Game over overlay */
+  .winner-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,20,10,0.9);
+    z-index: 100;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(6px);
+  }
+  .winner-overlay.show { display: flex; }
+  .winner-card {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 2.5rem;
+    text-align: center;
+    max-width: 360px;
+    width: 90%;
+    animation: popIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+  }
+  @keyframes popIn { from { transform: scale(0.7); opacity:0; } to { transform: scale(1); opacity:1; } }
+  .winner-card .trophy { font-size: 3rem; margin-bottom: 0.5rem; }
+  .winner-card h2 { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--gold); letter-spacing: 0.1em; margin-bottom: 0.25rem; }
+  .winner-card p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+  .winner-scores { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1.5rem; }
+  .ws { text-align: center; }
+  .ws .wn { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
+  .ws .wv { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--ivory); }
+
+  /* Responsive */
+  @media (max-width: 540px) {
+    .player-score { font-size: 2.5rem; }
+    .score-player { padding: 1rem; }
+    .colors-row { gap: 7px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="header-icon">🎱</div>
+    <div>
+      <h1>Snooker Scorer</h1>
+      <p>Frame-by-frame tracking</p>
+    </div>
+  </div>
+
+  <!-- SETUP -->
+  <div id="setup-screen">
+    <h2>New Frame</h2>
+    <div class="setup-field">
+      <label>Player 1</label>
+      <input type="text" id="p1-name" placeholder="e.g. Ronnie O'Sullivan" maxlength="24">
+    </div>
+    <div class="setup-field">
+      <label>Player 2</label>
+      <input type="text" id="p2-name" placeholder="e.g. Mark Selby" maxlength="24">
+    </div>
+    <button class="btn btn-gold" onclick="startGame()">Start Frame</button>
+
+    <div id="past-games-wrap" style="margin-top:1.5rem; display:none;">
+      <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);margin-bottom:0.6rem;">Recent Frames</div>
+      <div id="past-games-list"></div>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div id="game-screen">
+    <!-- Scoreboard -->
+    <div class="scoreboard">
+      <div class="score-player left active" id="p1-panel">
+        <div class="player-name" id="p1-display-name">Player 1</div>
+        <div class="player-score" id="p1-score">0</div>
+        <div class="player-break">Break: <span id="p1-break">0</span></div>
+      </div>
+      <div class="score-divider">
+        <div class="frame-label">Frame</div>
+        <div class="vs">VS</div>
+      </div>
+      <div class="score-player right" id="p2-panel">
+        <div class="player-name" id="p2-display-name" style="text-align:right">Player 2</div>
+        <div class="player-score" id="p2-score">0</div>
+        <div class="player-break">Break: <span id="p2-break">0</span></div>
+      </div>
+    </div>
+
+    <!-- Turn bar -->
+    <div class="turn-bar">
+      <div class="turn-indicator">
+        <div class="turn-dot"></div>
+        <span>At the table: <span class="turn-name" id="turn-name">—</span></span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span id="reds-left-badge" style="font-size:0.72rem;color:var(--text-muted);"></span>
+        <span id="balls-remaining" style="font-size:0.72rem;color:var(--text-muted);"></span>
+      </div>
+    </div>
+
+    <!-- Ball grid -->
+    <div class="balls-section">
+      <h3>Pot a ball</h3>
+      <div class="reds-row" id="reds-row"></div>
+      <h3 id="colours-heading" style="margin-bottom:0.85rem">Colours</h3>
+      <div class="colors-row" id="colors-row"></div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls-row">
+      <button class="btn btn-ghost" onclick="undoLast()" id="undo-btn">↩ Undo</button>
+      <button class="btn btn-ghost" onclick="toggleFoul()" id="foul-btn">⚠ Foul</button>
+      <button class="btn btn-ghost" onclick="endTurn()" id="miss-btn">Miss / End Turn</button>
+      <button class="btn btn-danger btn-sm" onclick="endFrame()" style="margin-left:auto">End Frame</button>
+    </div>
+
+    <!-- Foul panel -->
+    <div class="foul-panel" id="foul-panel">
+      <h3>Foul — Opponent receives:</h3>
+      <div class="foul-pts-row" id="foul-pts-row"></div>
+    </div>
+
+    <!-- History -->
+    <div class="history-section">
+      <div class="history-header">
+        <h3>Frame History</h3>
+        <span id="shots-count" style="font-size:0.72rem;color:var(--text-muted);"></span>
+      </div>
+      <div class="history-list" id="history-list">
+        <div class="history-empty">No shots yet — pot your first ball!</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Winner overlay -->
+<div class="winner-overlay" id="winner-overlay">
+  <div class="winner-card">
+    <div class="trophy">🏆</div>
+    <h2 id="winner-name">Winner!</h2>
+    <p id="winner-sub"></p>
+    <div class="winner-scores">
+      <div class="ws">
+        <div class="wn" id="w-p1n"></div>
+        <div class="wv" id="w-p1s"></div>
+      </div>
+      <div class="ws">
+        <div class="wn" id="w-p2n"></div>
+        <div class="wv" id="w-p2s"></div>
+      </div>
+    </div>
+    <button class="btn btn-gold" onclick="newGame()">New Frame</button>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════
+   DATABASE LAYER — swap out these functions to use any
+   backend (REST, SQLite, Supabase, etc.)
+   ════════════════════════════════════════════════════ */
+const DB = (() => {
+  const DB_NAME = 'SnookerScorerDB';
+  const DB_VER  = 1;
+  let db = null;
+
+  async function open() {
+    if (db) return db;
+    return new Promise((res, rej) => {
+      const req = indexedDB.open(DB_NAME, DB_VER);
+      req.onupgradeneeded = e => {
+        const d = e.target.result;
+        if (!d.objectStoreNames.contains('frames')) {
+          const s = d.createObjectStore('frames', { keyPath: 'id', autoIncrement: true });
+          s.createIndex('created', 'created', { unique: false });
+        }
+        if (!d.objectStoreNames.contains('shots')) {
+          const s = d.createObjectStore('shots', { keyPath: 'id', autoIncrement: true });
+          s.createIndex('frameId', 'frameId', { unique: false });
+        }
+      };
+      req.onsuccess = e => { db = e.target.result; res(db); };
+      req.onerror   = e => rej(e.target.error);
+    });
+  }
+
+  function tx(store, mode) {
+    return db.transaction(store, mode).objectStore(store);
+  }
+
+  function put(store, obj) {
+    return new Promise((res, rej) => {
+      const r = tx(store, 'readwrite').put(obj);
+      r.onsuccess = e => res(e.target.result);
+      r.onerror   = e => rej(e.target.error);
+    });
+  }
+
+  function getAll(store) {
+    return new Promise((res, rej) => {
+      const r = tx(store, 'readonly').getAll();
+      r.onsuccess = e => res(e.target.result);
+      r.onerror   = e => rej(e.target.error);
+    });
+  }
+
+  function getByIndex(store, idx, val) {
+    return new Promise((res, rej) => {
+      const r = tx(store, 'readonly').index(idx).getAll(val);
+      r.onsuccess = e => res(e.target.result);
+      r.onerror   = e => rej(e.target.error);
+    });
+  }
+
+  function del(store, key) {
+    return new Promise((res, rej) => {
+      const r = tx(store, 'readwrite').delete(key);
+      r.onsuccess = () => res();
+      r.onerror   = e => rej(e.target.error);
+    });
+  }
+
+  /* Public API */
+  return {
+    async init()                    { await open(); },
+    async saveFrame(frame)          { return put('frames', frame); },
+    async getFrames()               { return getAll('frames'); },
+    async saveShot(shot)            { return put('shots', shot); },
+    async getShots(frameId)         { return getByIndex('shots', 'frameId', frameId); },
+    async deleteShot(id)            { return del('shots', id); },
+  };
+})();
+
+/* ════════════════════════════════════════════════════
+   BALL DEFINITIONS
+   ════════════════════════════════════════════════════ */
+const COLOURS = [
+  { name:'Yellow', pts:2, css:'#f1c40f', light:'#fde68a', dark:'#92740a', size:38 },
+  { name:'Green',  pts:3, css:'#27ae60', light:'#6ee7b7', dark:'#065f46', size:38 },
+  { name:'Brown',  pts:4, css:'#795548', light:'#bcaaa4', dark:'#3e2723', size:38 },
+  { name:'Blue',   pts:5, css:'#2980b9', light:'#93c5fd', dark:'#1e3a5f', size:38 },
+  { name:'Pink',   pts:6, css:'#e91e8c', light:'#fbcfe8', dark:'#831843', size:38 },
+  { name:'Black',  pts:7, css:'#1a1a1a', light:'#6b7280', dark:'#000000', size:38 },
+];
+const RED_PTS = 1;
+const TOTAL_REDS = 15;
+
+function makeBallSVG(css, light, dark, size, label) {
+  const cx = size/2, cy = size/2, r = size/2 - 2;
+  const hx = cx - r*0.28, hy = cy - r*0.28;
+  const specR = r * 0.18;
+  return `<svg class="ball-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" aria-label="${label} ball">
+    <defs>
+      <radialGradient id="bg_${label}" cx="38%" cy="32%" r="65%">
+        <stop offset="0%" stop-color="${light}"/>
+        <stop offset="55%" stop-color="${css}"/>
+        <stop offset="100%" stop-color="${dark}"/>
+      </radialGradient>
+      <radialGradient id="spec_${label}" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="rgba(255,255,255,0.92)"/>
+        <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+      </radialGradient>
+    </defs>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#bg_${label})"/>
+    <ellipse cx="${hx}" cy="${hy}" rx="${specR}" ry="${specR*0.65}" fill="url(#spec_${label})" transform="rotate(-30,${hx},${hy})"/>
+  </svg>`;
+}
+
+/* ════════════════════════════════════════════════════
+   GAME STATE
+   ════════════════════════════════════════════════════ */
+let state = {
+  frameId: null,
+  players: ['',''],
+  scores: [0, 0],
+  breaks: [0, 0],
+  currentPlayer: 0,
+  redsLeft: TOTAL_REDS,
+  pottedColours: new Set(),  // colours potted while reds still on table (cleared when red next potted)
+  needColour: false,          // just potted a red, next must be colour
+  history: [],               // { id, player, action, pts, time, ballName, isFoul }
+  shotSeq: 0,
+};
+
+let foulOpen = false;
+
+/* ════════════════════════════════════════════════════
+   SETUP / INIT
+   ════════════════════════════════════════════════════ */
+async function init() {
+  await DB.init();
+  await loadPastGames();
+}
+
+async function loadPastGames() {
+  const frames = await DB.getFrames();
+  if (!frames.length) return;
+  const wrap = document.getElementById('past-games-wrap');
+  const list = document.getElementById('past-games-list');
+  wrap.style.display = 'block';
+  list.innerHTML = '';
+  const sorted = frames.slice().sort((a,b) => b.created - a.created).slice(0,5);
+  sorted.forEach(f => {
+    const div = document.createElement('div');
+    div.style.cssText = 'font-size:0.8rem;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;justify-content:space-between;align-items:center;';
+    const d = new Date(f.created);
+    div.innerHTML = `<span style="color:var(--text-muted)">${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
+      <span>${f.p1} <b style="color:var(--gold)">${f.s1}–${f.s2}</b> ${f.p2}</span>`;
+    list.appendChild(div);
+  });
+}
+
+async function startGame() {
+  const p1 = document.getElementById('p1-name').value.trim() || 'Player 1';
+  const p2 = document.getElementById('p2-name').value.trim() || 'Player 2';
+
+  state = {
+    frameId: null,
+    players: [p1, p2],
+    scores: [0, 0],
+    breaks: [0, 0],
+    currentPlayer: 0,
+    redsLeft: TOTAL_REDS,
+    pottedColours: new Set(),
+    needColour: false,
+    history: [],
+    shotSeq: 0,
+  };
+
+  // Save frame record
+  const fid = await DB.saveFrame({ p1, p2, s1:0, s2:0, created: Date.now(), finished: false });
+  state.frameId = fid;
+
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'block';
+
+  renderNames();
+  renderBalls();
+  updateScoreDisplay();
+  renderHistory();
+}
+
+function newGame() {
+  document.getElementById('winner-overlay').classList.remove('show');
+  document.getElementById('setup-screen').style.display = '';
+  document.getElementById('game-screen').style.display = 'none';
+  loadPastGames();
+}
+
+/* ════════════════════════════════════════════════════
+   RENDER HELPERS
+   ════════════════════════════════════════════════════ */
+function renderNames() {
+  document.getElementById('p1-display-name').textContent = state.players[0];
+  document.getElementById('p2-display-name').textContent = state.players[1];
+  document.getElementById('turn-name').textContent = state.players[state.currentPlayer];
+}
+
+function renderBalls() {
+  const redsRow = document.getElementById('reds-row');
+  const colorsRow = document.getElementById('colors-row');
+  redsRow.innerHTML = '';
+  colorsRow.innerHTML = '';
+
+  // Reds
+  for (let i = 0; i < TOTAL_REDS; i++) {
+    const potted = i >= state.redsLeft;
+    const btn = document.createElement('button');
+    btn.className = 'ball-btn' + (potted ? ' potted' : '');
+    btn.title = potted ? 'Potted' : `Pot red (+${RED_PTS})`;
+    btn.innerHTML = makeBallSVG('#c0392b','#f1948a','#7b241c', 30, `Red ${i+1}`);
+    if (!potted) btn.onclick = () => potRed();
+    redsRow.appendChild(btn);
+  }
+
+  // Colours
+  COLOURS.forEach(c => {
+    // In the red-phase: colour is "free" after each red; in colour phase it's permanently sequenced
+    const isColourPhase = state.redsLeft === 0;
+    const permanentlyPotted = isColourPhase && state.pottedColours.has(c.name);
+    const btn = document.createElement('button');
+    btn.id = `btn-${c.name}`;
+    btn.className = 'ball-btn' + (permanentlyPotted ? ' potted' : '');
+
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;';
+    wrapper.innerHTML = `${makeBallSVG(c.css, c.light, c.dark, c.size, c.name)}
+      <div class="ball-label">${c.name}</div>
+      <div class="ball-pts">+${c.pts}</div>`;
+
+    btn.appendChild(wrapper);
+    if (!permanentlyPotted) btn.onclick = () => potColour(c);
+    colorsRow.appendChild(btn);
+  });
+
+  // Dim unavailable balls based on game phase
+  updateBallAvailability();
+
+  // Update info
+  document.getElementById('reds-left-badge').textContent = state.redsLeft > 0 ? `${state.redsLeft} reds left` : 'Colour phase';
+  document.getElementById('balls-remaining').textContent = '';
+}
+
+function updateBallAvailability() {
+  const isColourPhase = state.redsLeft === 0;
+
+  // During red phase: if needColour, dim reds; else dim colours (but colours can always be potted if player wants)
+  // In colour phase: only the lowest-valued remaining colour can be potted
+  if (isColourPhase) {
+    const nextColour = getNextColour();
+    COLOURS.forEach(c => {
+      const btn = document.getElementById(`btn-${c.name}`);
+      if (!btn) return;
+      if (state.pottedColours.has(c.name)) return; // already styled potted
+      if (nextColour && c.name !== nextColour.name) {
+        btn.style.opacity = '0.35';
+        btn.style.pointerEvents = 'none';
+      } else {
+        btn.style.opacity = '';
+        btn.style.pointerEvents = '';
+      }
+    });
+  } else {
+    COLOURS.forEach(c => {
+      const btn = document.getElementById(`btn-${c.name}`);
+      if (!btn || btn.classList.contains('potted')) return;
+      btn.style.opacity = '';
+      btn.style.pointerEvents = '';
+    });
+  }
+}
+
+function getNextColour() {
+  const order = ['Yellow','Green','Brown','Blue','Pink','Black'];
+  for (const name of order) {
+    if (!state.pottedColours.has(name)) {
+      return COLOURS.find(c => c.name === name);
+    }
+  }
+  return null;
+}
+
+function updateScoreDisplay() {
+  document.getElementById('p1-score').textContent = state.scores[0];
+  document.getElementById('p2-score').textContent = state.scores[1];
+  document.getElementById('p1-break').textContent = state.breaks[0];
+  document.getElementById('p2-break').textContent = state.breaks[1];
+
+  document.getElementById('p1-panel').classList.toggle('active', state.currentPlayer === 0);
+  document.getElementById('p2-panel').classList.toggle('active', state.currentPlayer === 1);
+  document.getElementById('turn-name').textContent = state.players[state.currentPlayer];
+}
+
+/* ════════════════════════════════════════════════════
+   GAME LOGIC — potting
+   ════════════════════════════════════════════════════ */
+async function potRed() {
+  const isColourPhase = state.redsLeft === 0;
+  if (isColourPhase) return;
+
+  const pts = RED_PTS;
+  const cp = state.currentPlayer;
+  state.scores[cp] += pts;
+  state.breaks[cp] += pts;
+  state.redsLeft--;
+  state.needColour = true;
+  // Reset colour-after-red tracking: the potted colour goes back
+  // (colour returns to table unless it's the colour-in-order phase)
+  state.pottedColours.clear();
+
+  const shot = { frameId: state.frameId, player: cp, ballName: 'Red', pts, isFoul: false, time: Date.now(), seq: ++state.shotSeq };
+  const sid = await DB.saveShot(shot);
+  state.history.unshift({ ...shot, id: sid, action: 'Potted Red' });
+
+  await persistScores();
+  renderBalls();
+  updateScoreDisplay();
+  renderHistory();
+}
+
+async function potColour(c) {
+  const isColourPhase = state.redsLeft === 0;
+  if (isColourPhase) {
+    const next = getNextColour();
+    if (!next || next.name !== c.name) return;
+  }
+
+  const pts = c.pts;
+  const cp = state.currentPlayer;
+  state.scores[cp] += pts;
+  state.breaks[cp] += pts;
+  state.needColour = false;
+
+  if (isColourPhase) {
+    state.pottedColours.add(c.name);
+  }
+  // In red phase colour goes back to table (pottedColours stays cleared from red pot)
+
+  const shot = { frameId: state.frameId, player: cp, ballName: c.name, pts, isFoul: false, time: Date.now(), seq: ++state.shotSeq };
+  const sid = await DB.saveShot(shot);
+  state.history.unshift({ ...shot, id: sid, action: `Potted ${c.name}` });
+
+  await persistScores();
+
+  // Check if frame over (all colours potted)
+  if (isColourPhase && state.pottedColours.size === COLOURS.length) {
+    renderBalls();
+    updateScoreDisplay();
+    renderHistory();
+    setTimeout(endFrame, 300);
+    return;
+  }
+
+  renderBalls();
+  updateScoreDisplay();
+  renderHistory();
+}
+
+/* ════════════════════════════════════════════════════
+   FOUL
+   ════════════════════════════════════════════════════ */
+function toggleFoul() {
+  foulOpen = !foulOpen;
+  document.getElementById('foul-panel').style.display = foulOpen ? 'block' : 'none';
+  if (foulOpen && !document.getElementById('foul-pts-row').children.length) {
+    buildFoulPanel();
+  }
+}
+
+function buildFoulPanel() {
+  const row = document.getElementById('foul-pts-row');
+  row.innerHTML = '';
+  [4,5,6,7].forEach(pts => {
+    const btn = document.createElement('button');
+    btn.className = 'foul-pt-btn';
+    btn.textContent = `+${pts} pts`;
+    btn.onclick = () => applyFoul(pts);
+    row.appendChild(btn);
+  });
+}
+
+async function applyFoul(pts) {
+  const cp = state.currentPlayer;
+  const opp = 1 - cp;
+  state.scores[opp] += pts;
+  state.breaks[cp] = 0; // break ends on foul
+
+  const shot = { frameId: state.frameId, player: cp, ballName: 'Foul', pts: -pts, isFoul: true, time: Date.now(), seq: ++state.shotSeq };
+  const sid = await DB.saveShot(shot);
+  state.history.unshift({ ...shot, id: sid, action: `Foul (${pts} to ${state.players[opp]})` });
+
+  foulOpen = false;
+  document.getElementById('foul-panel').style.display = 'none';
+
+  await persistScores();
+  switchPlayer();
+  renderBalls();
+  updateScoreDisplay();
+  renderHistory();
+}
+
+/* ════════════════════════════════════════════════════
+   TURN MANAGEMENT
+   ════════════════════════════════════════════════════ */
+function endTurn() {
+  state.breaks[state.currentPlayer] = 0;
+  state.needColour = false;
+  switchPlayer();
+  updateScoreDisplay();
+  renderBalls();
+}
+
+function switchPlayer() {
+  state.currentPlayer = 1 - state.currentPlayer;
+  state.breaks[state.currentPlayer] = 0; // new player break starts at 0
+}
+
+/* ════════════════════════════════════════════════════
+   UNDO
+   ════════════════════════════════════════════════════ */
+async function undoLast() {
+  if (!state.history.length) return;
+  const last = state.history[0];
+
+  await DB.deleteShot(last.id);
+  state.history.shift();
+
+  if (last.isFoul) {
+    const opp = 1 - last.player;
+    state.scores[opp] += last.pts; // pts is negative (we stored -pts)
+    state.currentPlayer = last.player;
+  } else {
+    state.scores[last.player] -= last.pts;
+    state.breaks[last.player] = Math.max(0, state.breaks[last.player] - last.pts);
+
+    if (last.ballName === 'Red') {
+      state.redsLeft++;
+      state.needColour = false;
+    } else {
+      // Colour undo
+      const isColourPhase = state.redsLeft === 0;
+      if (isColourPhase) {
+        state.pottedColours.delete(last.ballName);
+      }
+      state.needColour = (last.ballName !== 'Red' && state.redsLeft > 0 && state.history.length > 0 && state.history[0]?.ballName === 'Red');
+    }
+  }
+
+  await persistScores();
+  renderBalls();
+  updateScoreDisplay();
+  renderHistory();
+}
+
+/* ════════════════════════════════════════════════════
+   HISTORY RENDER
+   ════════════════════════════════════════════════════ */
+const BALL_COLOURS = {
+  Red: '#c0392b', Yellow: '#f1c40f', Green: '#27ae60',
+  Brown: '#795548', Blue: '#2980b9', Pink: '#e91e8c',
+  Black: '#555', Foul: '#e74c3c',
+};
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  document.getElementById('shots-count').textContent = `${state.history.length} shots`;
+
+  if (!state.history.length) {
+    list.innerHTML = '<div class="history-empty">No shots yet — pot your first ball!</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  state.history.slice(0, 50).forEach(h => {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    const col = BALL_COLOURS[h.ballName] || '#888';
+    const t = new Date(h.time);
+    const tStr = t.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const ptsStr = h.isFoul ? `−${Math.abs(h.pts)}` : `+${h.pts}`;
+    div.innerHTML = `
+      <div class="history-ball-dot" style="background:${col}"></div>
+      <div class="history-who">${state.players[h.player]}</div>
+      <div class="history-action">${h.action}</div>
+      <div class="history-pts ${h.isFoul?'neg':''}">${ptsStr}</div>
+      <div class="history-time">${tStr}</div>`;
+    list.appendChild(div);
+  });
+}
+
+/* ════════════════════════════════════════════════════
+   END FRAME
+   ════════════════════════════════════════════════════ */
+async function endFrame() {
+  const [s0, s1] = state.scores;
+  const [p0, p1] = state.players;
+
+  await DB.saveFrame({ id: state.frameId, p1: p0, p2: p1, s1: s0, s2: s1, created: Date.now(), finished: true });
+
+  const winner = s0 > s1 ? 0 : s0 < s1 ? 1 : -1;
+  document.getElementById('winner-name').textContent = winner === -1 ? 'Draw!' : state.players[winner];
+  document.getElementById('winner-sub').textContent = winner === -1 ? 'Tied frame' : 'Wins the frame';
+  document.getElementById('w-p1n').textContent = p0;
+  document.getElementById('w-p2n').textContent = p1;
+  document.getElementById('w-p1s').textContent = s0;
+  document.getElementById('w-p2s').textContent = s1;
+  document.getElementById('winner-overlay').classList.add('show');
+}
+
+/* ════════════════════════════════════════════════════
+   PERSIST
+   ════════════════════════════════════════════════════ */
+async function persistScores() {
+  const [s0,s1] = state.scores;
+  const [p0,p1] = state.players;
+  await DB.saveFrame({ id: state.frameId, p1:p0, p2:p1, s1:s0, s2:s1, created: Date.now(), finished: false });
+}
+
+/* ════════════════════════════════════════════════════
+   BOOT
+   ════════════════════════════════════════════════════ */
+init();
+</script>
+</body>
+</html>

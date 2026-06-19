@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Snooker Scorer</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="setup-panel" id="setupPanel" aria-labelledby="setupTitle">
+        <div>
+          <p class="eyebrow">Frame scorer</p>
+          <h1 id="setupTitle">Snooker Scorer</h1>
+          <p class="setup-copy">Enter the players, then score the frame live from the table.</p>
+        </div>
+        <form id="setupForm" class="setup-form">
+          <label>
+            Player 1
+            <input id="playerOneInput" autocomplete="name" placeholder="Player 1" required>
+          </label>
+          <label>
+            Player 2
+            <input id="playerTwoInput" autocomplete="name" placeholder="Player 2" required>
+          </label>
+          <button type="submit">Start frame</button>
+        </form>
+      </section>
+
+      <section class="scoreboard hidden" id="scoreboard" aria-live="polite">
+        <div class="player-score active" data-player-card="0">
+          <span class="player-label" id="playerOneName">Player 1</span>
+          <strong id="playerOneScore">0</strong>
+        </div>
+        <div class="frame-status">
+          <span id="turnLabel">At table</span>
+          <b id="phaseLabel">Reds available</b>
+          <span id="remainingLabel">15 reds left</span>
+        </div>
+        <div class="player-score" data-player-card="1">
+          <span class="player-label" id="playerTwoName">Player 2</span>
+          <strong id="playerTwoScore">0</strong>
+        </div>
+      </section>
+
+      <section class="table-panel hidden" id="tablePanel">
+        <div class="table-top" aria-label="Snooker balls">
+          <div class="baulk-line"></div>
+          <div class="d-arc"></div>
+          <div class="spot spot-yellow"></div>
+          <div class="spot spot-brown"></div>
+          <div class="spot spot-green"></div>
+          <button class="ball yellow" data-ball="yellow" aria-label="Yellow, 2 points"><span>2</span></button>
+          <button class="ball brown" data-ball="brown" aria-label="Brown, 4 points"><span>4</span></button>
+          <button class="ball green" data-ball="green" aria-label="Green, 3 points"><span>3</span></button>
+          <button class="ball blue" data-ball="blue" aria-label="Blue, 5 points"><span>5</span></button>
+          <button class="ball pink" data-ball="pink" aria-label="Pink, 6 points"><span>6</span></button>
+          <button class="ball black" data-ball="black" aria-label="Black, 7 points"><span>7</span></button>
+          <button class="ball red-cluster" data-ball="red" aria-label="Red, 1 point"><span id="redCounter">15</span></button>
+        </div>
+
+        <div class="controls">
+          <div class="turn-toggle" role="group" aria-label="Current player">
+            <button type="button" class="selected" data-turn="0" id="turnPlayerOne">Player 1</button>
+            <button type="button" data-turn="1" id="turnPlayerTwo">Player 2</button>
+          </div>
+          <div class="quick-actions">
+            <button type="button" id="missButton">Miss / safety</button>
+            <button type="button" id="undoButton">Undo</button>
+            <button type="button" id="newFrameButton">New frame</button>
+          </div>
+        </div>
+
+        <form class="foul-panel" id="foulForm">
+          <label>
+            Foul points to opponent
+            <select id="foulValue">
+              <option value="4">4 points</option>
+              <option value="5">5 points</option>
+              <option value="6">6 points</option>
+              <option value="7">7 points</option>
+            </select>
+          </label>
+          <button type="submit">Record foul</button>
+        </form>
+      </section>
+
+      <section class="history-panel hidden" id="historyPanel" aria-labelledby="historyTitle">
+        <div class="history-header">
+          <h2 id="historyTitle">Current frame history</h2>
+          <button type="button" id="clearHistoryButton">Clear saved frames</button>
+        </div>
+        <ol id="historyList"></ol>
+        <h2 class="archive-title">Saved frames</h2>
+        <ol id="archiveList"></ol>
+      </section>
+    </main>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>

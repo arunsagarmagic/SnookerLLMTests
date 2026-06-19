@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Snooker Scorer Pro</title>
+<style>
+:root{
+--bg:#0f3f17;--panel:#173f1d;--text:#fff;--accent:#d8c16f;
+}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui}
+header{padding:12px;background:#0a2a0f;display:flex;gap:12px;flex-wrap:wrap}
+input,button,select{padding:8px}
+main{display:grid;grid-template-columns:1fr 340px;gap:12px;padding:12px}
+.panel{background:var(--panel);border-radius:12px;padding:12px}
+.score{font-size:56px;text-align:center;font-weight:bold}
+.balls{display:grid;grid-template-columns:repeat(4,90px);gap:18px;justify-content:center;padding:20px}
+.ball{
+width:90px;height:90px;border-radius:50%;cursor:pointer;
+box-shadow: inset -16px -16px 25px rgba(0,0,0,.45),
+inset 14px 14px 18px rgba(255,255,255,.15),
+0 8px 18px rgba(0,0,0,.45);
+}
+.history{height:600px;overflow:auto;font-size:14px}
+.event{padding:4px;border-bottom:1px solid rgba(255,255,255,.1)}
+.stat{font-size:22px;margin:8px 0}
+@media(max-width:900px){
+main{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header>
+<input id="p1" placeholder="Player 1">
+<input id="p2" placeholder="Player 2">
+<select id="bestOf">
+<option>1</option><option>3</option><option>5</option>
+<option>7</option><option>9</option>
+</select>
+<button id="newMatch">New Match</button>
+<button id="undo">Undo</button>
+<button id="exportBtn">Export</button>
+<button id="importBtn">Import</button>
+<input id="importFile" type="file" hidden>
+</header>
+
+<main>
+<section class="panel">
+<div id="score" class="score">0 - 0</div>
+<div class="stat">Current Break: <span id="break">0</span></div>
+<div class="stat">Highest Break: <span id="highest">0</span></div>
+<div class="stat">Reds Remaining: <span id="reds">15</span></div>
+
+<div>
+Current Player:
+<select id="currentPlayer">
+<option value="0">Player 1</option>
+<option value="1">Player 2</option>
+</select>
+<button id="endBreak">End Break</button>
+<button id="foul4">Foul 4</button>
+<button id="foul7">Foul 7</button>
+</div>
+
+<div class="balls" id="balls"></div>
+</section>
+
+<aside class="panel">
+<h2>History</h2>
+<div id="history" class="history"></div>
+</aside>
+</main>
+
+<script>
+/* Repository Layer */
+
+class Repository{
+ async saveMatch(match){}
+ async loadMatch(id){}
+ async saveEvent(matchId,event){}
+ async loadEvents(matchId){}
+}
+
+class IndexedDbRepository extends Repository{
+ constructor(){
+   super();
+   this.db=null;
+ }
+ async init(){
+   return new Promise((resolve,reject)=>{
+      const req=indexedDB.open("snooker-pro",1);
+      req.onupgradeneeded=e=>{
+        const db=e.target.result;
+        if(!db.objectStoreNames.contains("matches"))
+          db.createObjectStore("matches",{keyPath:"id"});
+      };
+      req.onsuccess=e=>{
+        this.db=e.target.result;
+        resolve();
+      };
+      req.onerror=reject;
+   });
+ }
+ async saveMatch(match){
+   return new Promise((resolve,reject)=>{
+      const tx=this.db.transaction("matches","readwrite");
+      tx.objectStore("matches").put(match);
+      tx.oncomplete=()=>resolve();
+      tx.onerror=reject;
+   });
+ }
+ async loadMatch(id){
+   return new Promise((resolve,reject)=>{
+      const tx=this.db.transaction("matches","readonly");
+      const req=tx.objectStore("matches").get(id);
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=reject;
+   });
+ }
+}
+
+const repo=new IndexedDbRepository();
+
+/* Domain */
+
+const BALLS=[
+{name:"Red",value:1,color:"#c00"},
+{name:"Yellow",value:2,color:"#e6d000"},
+{name:"Green",value:3,color:"#009944"},
+{name:"Brown",value:4,color:"#7b4b14"},
+{name:"Blue",value:5,color:"#1565ff"},
+{name:"Pink",value:6,color:"#ff77b4"},
+{name:"Black",value:7,color:"#111"}
+];
+
+class Match{
+ constructor(){
+  this.id="match-"+Date.now();
+  this.players=["Player 1","Player 2"];
+  this.framesWon=[0,0];
+  this.frame=this.newFrame();
+ }
+ newFrame(){
+   return {
+      scores:[0,0],
+      currentBreak:0,
+      highestBreak:0,
+      redsRemaining:15,
+      events:[]
+   };
+ }
+}
+
+let match=new Match();
+
+function event(action,data={}){
+ return {
+   ts:new Date().toISOString(),
+   action,
+   ...data
+ };
+}
+
+function currentPlayer(){
+ return Number(document.getElementById("currentPlayer").value);
+}
+
+function addEvent(ev){
+ match.frame.events.push(ev);
+ renderHistory();
+ persist();
+}
+
+function potBall(ball){
+ const p=currentPlayer();
+
+ match.frame.scores[p]+=ball.value;
+ match.frame.currentBreak+=ball.value;
+
+ if(match.frame.currentBreak>match.frame.highestBreak)
+   match.frame.highestBreak=match.frame.currentBreak;
+
+ if(ball.name==="Red" && match.frame.redsRemaining>0)
+   match.frame.redsRemaining--;
+
+ addEvent(event("pot",{
+    player:p,
+    ball:ball.name,
+    points:ball.value
+ }));
+
+ render();
+}
+
+function foul(points){
+ const offender=currentPlayer();
+ const other=offender===0?1:0;
+
+ match.frame.scores[other]+=points;
+
+ addEvent(event("foul",{
+   offender,
+   awardedTo:other,
+   points
+ }));
+
+ match.frame.currentBreak=0;
+ render();
+}
+
+function endBreak(){
+ addEvent(event("endBreak",{
+   player:currentPlayer(),
+   breakValue:match.frame.currentBreak
+ }));
+
+ match.frame.currentBreak=0;
+ render();
+}
+
+function undo(){
+ const e=match.frame.events.pop();
+ if(!e)return;
+
+ rebuildFromEvents();
+ render();
+ renderHistory();
+ persist();
+}
+
+function rebuildFromEvents(){
+ const old=[...match.frame.events];
+
+ match.frame={
+   scores:[0,0],
+   currentBreak:0,
+   highestBreak:0,
+   redsRemaining:15,
+   events:[]
+ };
+
+ for(const e of old){
+   if(e.action==="pot"){
+      match.frame.scores[e.player]+=e.points;
+      match.frame.currentBreak+=e.points;
+      if(match.frame.currentBreak>match.frame.highestBreak)
+         match.frame.highestBreak=match.frame.currentBreak;
+      if(e.ball==="Red")
+         match.frame.redsRemaining--;
+   }
+   if(e.action==="foul"){
+      match.frame.scores[e.awardedTo]+=e.points;
+      match.frame.currentBreak=0;
+   }
+   if(e.action==="endBreak"){
+      match.frame.currentBreak=0;
+   }
+   match.frame.events.push(e);
+ }
+}
+
+function render(){
+ document.getElementById("score").textContent=
+   match.frame.scores[0]+" - "+match.frame.scores[1];
+
+ document.getElementById("break").textContent=
+   match.frame.currentBreak;
+
+ document.getElementById("highest").textContent=
+   match.frame.highestBreak;
+
+ document.getElementById("reds").textContent=
+   match.frame.redsRemaining;
+}
+
+function renderHistory(){
+ const h=document.getElementById("history");
+
+ h.innerHTML=match.frame.events.slice().reverse().map(e=>{
+   return '<div class="event">'+JSON.stringify(e)+'</div>';
+ }).join("");
+}
+
+async function persist(){
+ await repo.saveMatch(match);
+}
+
+function exportMatch(){
+ const blob=new Blob(
+   [JSON.stringify(match,null,2)],
+   {type:"application/json"}
+ );
+ const a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);
+ a.download="snooker-match.json";
+ a.click();
+}
+
+function importMatch(file){
+ const reader=new FileReader();
+ reader.onload=async ()=>{
+    match=JSON.parse(reader.result);
+    render();
+    renderHistory();
+    await persist();
+ };
+ reader.readAsText(file);
+}
+
+async function init(){
+ await repo.init();
+
+ const balls=document.getElementById("balls");
+
+ BALLS.forEach(ball=>{
+    const el=document.createElement("div");
+    el.className="ball";
+    el.title=ball.name+" ("+ball.value+")";
+    el.style.background=
+      "radial-gradient(circle at 30% 30%, rgba(255,255,255,.45), "+ball.color+")";
+
+    el.onclick=()=>potBall(ball);
+
+    balls.appendChild(el);
+ });
+
+ document.getElementById("undo").onclick=undo;
+ document.getElementById("endBreak").onclick=endBreak;
+ document.getElementById("foul4").onclick=()=>foul(4);
+ document.getElementById("foul7").onclick=()=>foul(7);
+
+ document.getElementById("newMatch").onclick=()=>{
+    match=new Match();
+    match.players=[
+      document.getElementById("p1").value||"Player 1",
+      document.getElementById("p2").value||"Player 2"
+    ];
+    render();
+    renderHistory();
+    persist();
+ };
+
+ document.getElementById("exportBtn").onclick=exportMatch;
+
+ document.getElementById("importBtn").onclick=()=>{
+   document.getElementById("importFile").click();
+ };
+
+ document.getElementById("importFile").onchange=e=>{
+   if(e.target.files[0])
+      importMatch(e.target.files[0]);
+ };
+
+ render();
+}
+
+init();
+</script>
+</body>
+</html>
