@@ -42,7 +42,7 @@
 		"notes": ""
 	},
 	{
-		"name": "Gemma 3.1B",
+		"name": "Gemma4 31B",
 		"file": "gemma31b.html",
 		"sizeClass": "M",
 		"score": "C",
