@@ -1,112 +1,378 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snooker LLM Tests Results</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
-        .container { background-color: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1 { color: #1f6feb; border-bottom: 3px solid #1f6feb; padding-bottom: 10px; }
-        .subtitle { color: #666; margin-bottom: 30px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.95em; }
-        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e1e4e8; }
-        th { background-color: #f6f8fa; font-weight: 600; color: #24292f; position: sticky; top: 0; }
-        tr:hover { background-color: #f6f8fa; }
-        .score { display: inline-block; padding: 2px 10px; border-radius: 12px; font-weight: 700; font-size: 0.85em; min-width: 24px; text-align: center; }
-        .score-a { background-color: #2da44e; color: white; }
-        .score-b { background-color: #98d85b; color: white; }
-        .score-c { background-color: #f5c842; color: #333; }
-        .score-d { background-color: #f0883e; color: white; }
-        .score-f { background-color: #cf222e; color: white; }
-        .score-na { background-color: #d0d7de; color: #57606a; }
-        .size-class { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 0.8em; font-weight: 600; background-color: #ddf4ff; color: #0969da; }
-        .model-link { color: #1f6feb; text-decoration: none; font-weight: 600; }
-        .model-link:hover { text-decoration: underline; }
-        .notes { color: #57606a; font-style: italic; }
-        .filter-bar { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
-        .filter-bar label { font-weight: 600; font-size: 0.9em; }
-        .filter-bar select { padding: 6px 12px; border: 1px solid #d0d7de; border-radius: 6px; font-size: 0.9em; background-color: white; }
-        .summary { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
-        .summary-card { background-color: #f6f8fa; border: 1px solid #e1e4e8; border-radius: 6px; padding: 12px 20px; text-align: center; min-width: 100px; }
-        .summary-card .number { font-size: 1.8em; font-weight: 700; color: #1f6feb; }
-        .summary-card .label { font-size: 0.8em; color: #57606a; }
-    </style>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Snooker LLM Tests Results</title>
+	<style>
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+			line-height: 1.6;
+			color: #333;
+			max-width: 1200px;
+			margin: 0 auto;
+			padding: 20px;
+			background-color: #f5f5f5;
+		}
+
+		.container {
+			background-color: white;
+			border-radius: 8px;
+			padding: 30px;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		}
+
+		h1 {
+			color: #1f6feb;
+			border-bottom: 3px solid #1f6feb;
+			padding-bottom: 10px;
+		}
+
+		.subtitle {
+			color: #666;
+			margin-bottom: 30px;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-top: 20px;
+			font-size: 0.95em;
+		}
+
+		th,
+		td {
+			padding: 12px 16px;
+			text-align: left;
+			border-bottom: 1px solid #e1e4e8;
+		}
+
+		th {
+			background-color: #f6f8fa;
+			font-weight: 600;
+			color: #24292f;
+			position: sticky;
+			top: 0;
+		}
+
+		.sort-btn {
+			cursor: pointer;
+			user-select: none;
+			display: inline-flex;
+			align-items: center;
+			gap: 4px;
+		}
+
+		.sort-btn:hover {
+			color: #0969da;
+		}
+
+		.sort-arrow {
+			font-size: 0.75em;
+			color: #8b949e;
+			transition: color 0.15s;
+		}
+
+		.sort-btn.active .sort-arrow {
+			color: #0969da;
+		}
+
+		.sort-btn:hover .sort-arrow {
+			color: #0969da;
+		}
+
+		tr:hover {
+			background-color: #f6f8fa;
+		}
+
+		.score {
+			display: inline-block;
+			padding: 2px 10px;
+			border-radius: 12px;
+			font-weight: 700;
+			font-size: 0.85em;
+			min-width: 24px;
+			text-align: center;
+		}
+
+		.score-a {
+			background-color: #2da44e;
+			color: white;
+		}
+
+		.score-b {
+			background-color: #98d85b;
+			color: white;
+		}
+
+		.score-c {
+			background-color: #f5c842;
+			color: #333;
+		}
+
+		.score-d {
+			background-color: #f0883e;
+			color: white;
+		}
+
+		.score-f {
+			background-color: #cf222e;
+			color: white;
+		}
+
+		.score-na {
+			background-color: #d0d7de;
+			color: #57606a;
+		}
+
+		.size-class {
+			display: inline-block;
+			padding: 2px 8px;
+			border-radius: 3px;
+			font-size: 0.8em;
+			font-weight: 600;
+			background-color: #ddf4ff;
+			color: #0969da;
+		}
+
+		.model-link {
+			color: #1f6feb;
+			text-decoration: none;
+			font-weight: 600;
+		}
+
+		.model-link:hover {
+			text-decoration: underline;
+		}
+
+		.notes {
+			color: #57606a;
+			font-style: italic;
+		}
+
+		.filter-bar {
+			display: flex;
+			gap: 12px;
+			margin-bottom: 16px;
+			flex-wrap: wrap;
+			align-items: center;
+		}
+
+		.filter-bar label {
+			font-weight: 600;
+			font-size: 0.9em;
+		}
+
+		.filter-bar select {
+			padding: 6px 12px;
+			border: 1px solid #d0d7de;
+			border-radius: 6px;
+			font-size: 0.9em;
+			background-color: white;
+		}
+
+		.summary {
+			display: flex;
+			gap: 20px;
+			margin: 2em 0;
+			flex-wrap: wrap;
+		}
+
+		.summary-card {
+			background-color: #f6f8fa;
+			border: 1px solid #e1e4e8;
+			border-radius: 6px;
+			padding: 12px 20px;
+			text-align: center;
+			min-width: 100px;
+		}
+
+		.summary-card .number {
+			font-size: 1.8em;
+			font-weight: 700;
+			color: #1f6feb;
+		}
+
+		.summary-card .label {
+			font-size: 0.8em;
+			color: #57606a;
+		}
+	</style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>🎱 Snooker LLM Tests Results</h1>
-        <p class="subtitle">Collection of Snooker Scoring webapp implementations generated by different LLMs. Each result shows a complete application created from a single prompt.</p>
-        <div class="summary" id="summary"></div>
-        <div class="filter-bar">
-            <label for="scoreFilter">Score:</label>
-            <select id="scoreFilter">
-                <option value="all">All</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
-                <option value="D">D</option>
-                <option value="F">F</option>
-                <option value="unscored">Unscored</option>
-            </select>
-            <label for="sizeFilter">Size Class:</label>
-            <select id="sizeFilter">
-                <option value="all">All</option>
-                <option value="SLM">SLM (≤10B)</option>
-                <option value="MLM">MLM (10B–100B)</option>
-                <option value="LLM">LLM (>100B)</option>
-                <option value="XLLM">XLLM (≤1T)</option>
-                <option value="XXLLM">XXLLM (≤10T)</option>
-                <option value="unclassified">Unclassified</option>
-            </select>
-        </div>
-        <table id="resultsTable">
-            <thead><tr><th>#</th><th>Model</th><th>Size Class</th><th>Score</th><th>Notes</th></tr></thead>
-            <tbody id="resultsBody"></tbody>
-        </table>
-    </div>
-    <script>
-        const SCORE_CLASSES = { A: 'score-a', B: 'score-b', C: 'score-c', D: 'score-d', F: 'score-f' };
-        async function loadResults() { const r = await fetch('results.json'); return r.json(); }
-        function renderTable(results) {
-            const tbody = document.getElementById('resultsBody');
-            tbody.innerHTML = '';
-            results.forEach((r, i) => {
-                const tr = document.createElement('tr');
-                const sc = r.score ? (SCORE_CLASSES[r.score.toUpperCase()] || 'score-na') : 'score-na';
-                const sz = r.sizeClass ? '<span class="size-class">' + r.sizeClass + '</span>' : '<span class="size-class" style="background:#f6f8fa;color:#57606a;">—</span>';
-                tr.innerHTML = '<td>' + (i+1) + '</td><td><a class="model-link" href="' + r.file + '">' + r.name + '</a></td><td>' + sz + '</td><td><span class="score ' + sc + '">' + (r.score || '—') + '</span></td><td class="notes">' + (r.notes || '') + '</td>';
-                tbody.appendChild(tr);
-            });
-        }
-        function renderSummary(results) {
-            const s = document.getElementById('summary');
-            const total = results.length;
-            const scored = results.filter(r => r.score).length;
-            const grades = {};
-            results.forEach(r => { if (r.score) grades[r.score.toUpperCase()] = (grades[r.score.toUpperCase()] || 0) + 1; });
-            let c = '<div class="summary-card"><div class="number">' + total + '</div><div class="label">Total Models</div></div><div class="summary-card"><div class="number">' + scored + '</div><div class="label">Scored</div></div>';
-            ['A','B','C','D','F'].forEach(g => { if (grades[g]) c += '<div class="summary-card"><div class="number">' + grades[g] + '</div><div class="label">Grade ' + g + '</div></div>'; });
-            s.innerHTML = c;
-        }
-        function filterResults(results) {
-            const sf = document.getElementById('scoreFilter').value;
-            const szf = document.getElementById('sizeFilter').value;
-            return results.filter(r => {
-                const sm = sf === 'all' || (sf === 'unscored' && !r.score) || r.score?.toUpperCase() === sf;
-                const szm = szf === 'all' || (szf === 'unclassified' && !r.sizeClass) || r.sizeClass === szf;
-                return sm && szm;
-            });
-        }
-        async function init() {
-            const results = await loadResults();
-            renderSummary(results);
-            renderTable(results);
-            document.getElementById('scoreFilter').addEventListener('change', () => { renderTable(filterResults(results)); });
-            document.getElementById('sizeFilter').addEventListener('change', () => { renderTable(filterResults(results)); });
-        }
-        init();
-    </script>
+	<div class="container">
+		<h1>🎱 Snooker LLM Tests Results</h1>
+		<p class="subtitle">Collection of Snooker Scoring webapp implementations generated by different LLMs. Each
+			result shows a complete application created from a single prompt.</p>
+		<p>
+			A variety of LLM models were tested with a single prompt to establish a checkpoint of performance. Scoring
+			is coarse
+			grain (A-F).
+		</p>
+		<p>Existing terminology for language model size is:<br />
+			SLM <= 10B, 10B < MLM <=100B, LLM> 100B.</p>
+		<p>
+			Given that we have 1T and larger models, it is useful to extend the terminology: XL <=1T, XXL <=10T, etc.
+				</p>
+				<h3>Prompt Used</h3>
+				<blockquote>Build a snooker scoring webapp. Use indexdb for storage, with clean database APIs so that a normal database can be
+				plugged later.
+				The app should take the two player's name and then provide an intuitive UI for entering the current state of the game by
+				showing the colored balls (3d/shaded). It should also show a running score on same page prominently. It'll be used as
+				the game is played. The history should be tracked.</blockquote>
+				<div class="summary" id="summary"></div>
+				<div class="filter-bar">
+					<label for="scoreFilter">Score:</label>
+					<select id="scoreFilter">
+						<option value="all">All</option>
+						<option value="A">A</option>
+						<option value="B">B</option>
+						<option value="C">C</option>
+						<option value="D">D</option>
+						<option value="F">F</option>
+						<option value="unscored">Unscored</option>
+					</select>
+					<label for="sizeFilter">Size Class:</label>
+					<select id="sizeFilter">
+						<option value="all">All</option>
+						<option value="SLM">SLM (≤10B)</option>
+						<option value="MLM">MLM (10B–100B)</option>
+						<option value="LLM">LLM (>100B)</option>
+						<option value="XLLM">XLLM (≤1T)</option>
+						<option value="XXLLM">XXLLM (≤10T)</option>
+						<option value="unclassified">Unclassified</option>
+					</select>
+				</div>
+				<table id="resultsTable">
+					<thead>
+						<tr>
+							<th>#</th>
+							<th><span class="sort-btn" data-sort="model">Model <span class="sort-arrow">⇅</span></span>
+							</th>
+							<th><span class="sort-btn" data-sort="sizeClass">Size Class <span
+										class="sort-arrow">⇅</span></span></th>
+							<th><span class="sort-btn" data-sort="score">Score <span class="sort-arrow">⇅</span></span>
+							</th>
+							<th>Notes</th>
+						</tr>
+					</thead>
+					<tbody id="resultsBody"></tbody>
+				</table>
+	</div>
+	<script>
+		const SCORE_CLASSES = { A: 'score-a', B: 'score-b', C: 'score-c', D: 'score-d', F: 'score-f' };
+		async function loadResults() { const r = await fetch('results.json'); return r.json(); }
+		function renderTable(results)
+		{
+			const tbody = document.getElementById('resultsBody');
+			tbody.innerHTML = '';
+			results.forEach((r, i) =>
+			{
+				const tr = document.createElement('tr');
+				const sc = r.score ? (SCORE_CLASSES[r.score.toUpperCase()] || 'score-na') : 'score-na';
+				const sz = r.sizeClass ? '<span class="size-class">' + r.sizeClass + '</span>' : '<span class="size-class" style="background:#f6f8fa;color:#57606a;">—</span>';
+				tr.innerHTML = '<td>' + (i + 1) + '</td><td><a class="model-link" href="' + r.file + '">' + r.name + '</a></td><td>' + sz + '</td><td><span class="score ' + sc + '">' + (r.score || '—') + '</span></td><td class="notes">' + (r.notes || '') + '</td>';
+				tbody.appendChild(tr);
+			});
+		}
+		function renderSummary(results)
+		{
+			const s = document.getElementById('summary');
+			const total = results.length;
+			const scored = results.filter(r => r.score).length;
+			const grades = {};
+			results.forEach(r => { if (r.score) grades[r.score.toUpperCase()] = (grades[r.score.toUpperCase()] || 0) + 1; });
+			let c = '<div class="summary-card"><div class="number">' + total + '</div><div class="label">Total Models</div></div><div class="summary-card"><div class="number">' + scored + '</div><div class="label">Scored</div></div>';
+			['A', 'B', 'C', 'D', 'F'].forEach(g => { if (grades[g]) c += '<div class="summary-card"><div class="number">' + grades[g] + '</div><div class="label">Grade ' + g + '</div></div>'; });
+			s.innerHTML = c;
+		}
+		function filterResults(results)
+		{
+			const sf = document.getElementById('scoreFilter').value;
+			const szf = document.getElementById('sizeFilter').value;
+			return results.filter(r =>
+			{
+				const sm = sf === 'all' || (sf === 'unscored' && !r.score) || r.score?.toUpperCase() === sf;
+				const szm = szf === 'all' || (szf === 'unclassified' && !r.sizeClass) || r.sizeClass === szf;
+				return sm && szm;
+			});
+		}
+		let currentSort = { key: null, asc: true };
+		function sortResults(results, key, asc)
+		{
+			const scoreOrder = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'F': 1 };
+			return [...results].sort((a, b) =>
+			{
+				let va, vb;
+				if (key === 'model')
+				{
+					va = (a.name || '').toLowerCase();
+					vb = (b.name || '').toLowerCase();
+				} else if (key === 'sizeClass')
+				{
+					va = (a.sizeClass || '').toLowerCase();
+					vb = (b.sizeClass || '').toLowerCase();
+				} else if (key === 'score')
+				{
+					va = scoreOrder[a.score?.toUpperCase()] || 0;
+					vb = scoreOrder[b.score?.toUpperCase()] || 0;
+				}
+				if (va < vb) return asc ? -1 : 1;
+				if (va > vb) return asc ? 1 : -1;
+				return 0;
+			});
+		}
+		function updateSortIndicators()
+		{
+			document.querySelectorAll('.sort-btn').forEach(btn =>
+			{
+				const key = btn.getAttribute('data-sort');
+				const arrow = btn.querySelector('.sort-arrow');
+				if (currentSort.key === key)
+				{
+					btn.classList.add('active');
+					arrow.textContent = currentSort.asc ? '↑' : '↓';
+				} else
+				{
+					btn.classList.remove('active');
+					arrow.textContent = '⇅';
+				}
+			});
+		}
+		async function init()
+		{
+			const results = await loadResults();
+			renderSummary(results);
+			renderTable(results);
+			document.getElementById('scoreFilter').addEventListener('change', () => { renderTable(filterResults(results)); });
+			document.getElementById('sizeFilter').addEventListener('change', () => { renderTable(filterResults(results)); });
+			document.querySelectorAll('.sort-btn').forEach(btn =>
+			{
+				btn.addEventListener('click', () =>
+				{
+					const key = btn.getAttribute('data-sort');
+					if (currentSort.key === key)
+					{
+						currentSort.asc = !currentSort.asc;
+					} else
+					{
+						currentSort = { key, asc: true };
+					}
+					const filtered = filterResults(results);
+					const sorted = sortResults(filtered, currentSort.key, currentSort.asc);
+					renderTable(sorted);
+					updateSortIndicators();
+				});
+			});
+		}
+		init();
+	</script>
 </body>
+
 </html>

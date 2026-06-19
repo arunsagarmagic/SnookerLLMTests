@@ -84,10 +84,26 @@
 		"notes": ""
 	},
 	{
-		"name": "Sarvam 120B",
+		"name": "Sarvam 105b",
 		"file": "sarvam.txt",
 		"sizeClass": "L",
 		"score": "F",
 		"notes": "truncated output"
+	},
+	
+	{
+		"name": "Qwen 3.7max",
+		"file": "Qwen3.7max.html",
+		"sizeClass": "XL",
+		"score": "A",
+		"notes": ""
+	}
+	,
+	{
+		"name": "Mistral3.5 medium",
+		"file": "mistral3.5.medium.html",
+		"sizeClass": "L",
+		"score": "B",
+		"notes": "Buggy"
 	}
 ]
