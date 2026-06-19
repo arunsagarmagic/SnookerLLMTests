@@ -226,7 +226,7 @@
 				The app should take the two player's name and then provide an intuitive UI for entering the current state of the game by
 				showing the colored balls (3d/shaded). It should also show a running score on same page prominently. It'll be used as
 				the game is played. The history should be tracked.</blockquote>
-				<div class="summary" id="summary"></div>
+				<!-- <div class="summary" id="summary"></div>
 				<div class="filter-bar">
 					<label for="scoreFilter">Score:</label>
 					<select id="scoreFilter">
@@ -248,7 +248,7 @@
 						<option value="XXLLM">XXLLM (≤10T)</option>
 						<option value="unclassified">Unclassified</option>
 					</select>
-				</div>
+				</div> -->
 				<table id="resultsTable">
 					<thead>
 						<tr>
@@ -348,10 +348,10 @@
 		async function init()
 		{
 			const results = await loadResults();
-			renderSummary(results);
+			//renderSummary(results);
 			renderTable(results);
-			document.getElementById('scoreFilter').addEventListener('change', () => { renderTable(filterResults(results)); });
-			document.getElementById('sizeFilter').addEventListener('change', () => { renderTable(filterResults(results)); });
+			//document.getElementById('scoreFilter').addEventListener('change', () => { renderTable(filterResults(results)); });
+			//document.getElementById('sizeFilter').addEventListener('change', () => { renderTable(filterResults(results)); });
 			document.querySelectorAll('.sort-btn').forEach(btn =>
 			{
 				btn.addEventListener('click', () =>
