@@ -1,0 +1,2183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snooker Scorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e0c;
+    --bg-2: #131814;
+    --bg-3: #1a201c;
+    --felt: #0a4d36;
+    --felt-dark: #062e21;
+    --felt-light: #0f5a40;
+    --wood: #3a1f12;
+    --gold: #e8b647;
+    --gold-bright: #ffd76b;
+    --gold-dim: #8a6929;
+    --cream: #f4ead5;
+    --fg: #f4ead5;
+    --muted: #7a8580;
+    --red: #d62828;
+    --yellow: #f9c80e;
+    --green-ball: #2a9d3f;
+    --brown: #7b3f1d;
+    --blue: #2563eb;
+    --pink: #ec4899;
+    --black-ball: #18181b;
+    --card: rgba(255,255,255,0.035);
+    --card-hover: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.15);
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  html, body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  /* Atmospheric background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(232, 182, 71, 0.08), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 50% 110%, rgba(13, 77, 54, 0.18), transparent 70%),
+      radial-gradient(circle at 15% 50%, rgba(214, 40, 40, 0.04), transparent 40%),
+      radial-gradient(circle at 85% 50%, rgba(37, 99, 235, 0.04), transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      repeating-linear-gradient(45deg, transparent 0, transparent 2px, rgba(255,255,255,0.005) 2px, rgba(255,255,255,0.005) 4px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* ========== SETUP SCREEN ========== */
+  .setup-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  
+  .setup-hero {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  
+  .setup-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1.25rem;
+    padding: 0.4rem 1rem;
+    border: 1px solid rgba(232, 182, 71, 0.3);
+    border-radius: 999px;
+    background: rgba(232, 182, 71, 0.05);
+  }
+  
+  .setup-eyebrow::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--gold);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--gold);
+  }
+  
+  .setup-title {
+    font-family: 'Anton', sans-serif;
+    font-size: clamp(3.5rem, 10vw, 7rem);
+    line-height: 0.88;
+    letter-spacing: -1px;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+  }
+  
+  .setup-title .accent {
+    color: var(--gold);
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold-dim));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .setup-subtitle {
+    color: var(--muted);
+    font-size: 1.05rem;
+    max-width: 460px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+  
+  .setup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    width: 100%;
+    max-width: 480px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2rem;
+    backdrop-filter: blur(10px);
+  }
+  
+  .player-inputs {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0.75rem;
+    align-items: end;
+  }
+  
+  .vs-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--felt-dark);
+    border: 1px solid var(--border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Anton', sans-serif;
+    color: var(--gold);
+    font-size: 0.9rem;
+    margin-bottom: 0.6rem;
+  }
+  
+  .input-group { display: flex; flex-direction: column; gap: 0.4rem; }
+  
+  .input-group label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  
+  .input-group input,
+  .input-group select {
+    width: 100%;
+    padding: 0.95rem 1.1rem;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--fg);
+    font-family: 'Outfit', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  
+  .input-group input:focus,
+  .input-group select:focus {
+    outline: none;
+    border-color: var(--gold);
+    background: rgba(232, 182, 71, 0.05);
+    box-shadow: 0 0 0 3px rgba(232, 182, 71, 0.1);
+  }
+  
+  .frames-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  
+  /* Buttons */
+  .btn {
+    padding: 0.9rem 1.5rem;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    user-select: none;
+  }
+  
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  
+  .btn-primary {
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    color: #1a1208;
+    box-shadow: 0 4px 12px rgba(232, 182, 71, 0.25);
+  }
+  
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(232, 182, 71, 0.4);
+  }
+  
+  .btn-primary:active { transform: translateY(0); }
+  
+  .btn-secondary {
+    background: var(--card);
+    color: var(--fg);
+    border: 1px solid var(--border);
+  }
+  
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--card-hover);
+    border-color: var(--border-strong);
+  }
+  
+  .btn-danger {
+    background: rgba(214, 40, 40, 0.12);
+    color: #ff6b6b;
+    border: 1px solid rgba(214, 40, 40, 0.3);
+  }
+  
+  .btn-danger:hover:not(:disabled) {
+    background: rgba(214, 40, 40, 0.2);
+    border-color: rgba(214, 40, 40, 0.5);
+  }
+  
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid transparent;
+  }
+  
+  .btn-ghost:hover { color: var(--fg); background: var(--card); }
+  
+  /* Recent matches */
+  .recent-section {
+    margin-top: 2.5rem;
+    width: 100%;
+    max-width: 720px;
+  }
+  
+  .recent-title {
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  
+  .recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .recent-item {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .recent-item:hover {
+    background: var(--card-hover);
+    border-color: var(--gold-dim);
+  }
+  
+  .recent-player {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  
+  .recent-player.right { text-align: right; }
+  
+  .recent-score {
+    font-family: 'Anton', sans-serif;
+    font-size: 1.5rem;
+    color: var(--gold);
+    min-width: 30px;
+    text-align: center;
+  }
+  
+  .recent-winner { color: var(--gold); }
+  .recent-loser { color: var(--muted); }
+  
+  .recent-date {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-align: right;
+  }
+  
+  .recent-empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.9rem;
+    padding: 2rem;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+  }
+  
+  /* ========== GAME SCREEN ========== */
+  .game-screen { display: none; }
+  .game-screen.active { display: block; animation: fadeIn 0.4s ease-out; }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .logo {
+    font-family: 'Anton', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  
+  .logo .gold { color: var(--gold); }
+  
+  .header-actions { display: flex; gap: 0.5rem; }
+  
+  /* Frame info bar */
+  .frame-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    padding: 0.9rem 1.25rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    font-size: 0.85rem;
+    align-items: center;
+  }
+  
+  .frame-bar > div { display: flex; align-items: center; gap: 0.5rem; }
+  .frame-bar > div:nth-child(2) { justify-content: center; }
+  .frame-bar > div:nth-child(3) { justify-content: flex-end; }
+  
+  .frame-bar .label {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-size: 0.7rem;
+  }
+  
+  .frame-bar .value {
+    font-family: 'Anton', sans-serif;
+    color: var(--gold);
+    font-size: 1.1rem;
+  }
+  
+  .reds-pill {
+    padding: 0.25rem 0.65rem;
+    background: rgba(214, 40, 40, 0.15);
+    border: 1px solid rgba(214, 40, 40, 0.3);
+    border-radius: 999px;
+    color: #ff6b6b;
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+  
+  /* Score board */
+  .score-board {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .player-panel {
+    padding: 1.5rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+  
+  .player-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--gold);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s;
+  }
+  
+  .player-panel.active {
+    background: linear-gradient(180deg, rgba(232, 182, 71, 0.08), rgba(232, 182, 71, 0.02));
+    border-color: rgba(232, 182, 71, 0.4);
+    box-shadow: 
+      0 0 0 1px rgba(232, 182, 71, 0.1),
+      0 8px 30px rgba(232, 182, 71, 0.1);
+  }
+  
+  .player-panel.active::before { transform: scaleX(1); }
+  
+  .player-panel.active::after {
+    content: 'AT TABLE';
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    color: var(--gold);
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  
+  .player-name {
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .player-panel.active .player-name { color: var(--cream); }
+  
+  .player-score {
+    font-family: 'Anton', sans-serif;
+    font-size: clamp(3.5rem, 7vw, 5.5rem);
+    line-height: 0.9;
+    color: var(--cream);
+    letter-spacing: -1px;
+    transition: color 0.3s;
+  }
+  
+  .player-panel.active .player-score {
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  @keyframes scoreBump {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+  
+  .player-score.bump { animation: scoreBump 0.45s ease-out; }
+  
+  .player-meta {
+    margin-top: 0.75rem;
+    display: flex;
+    gap: 1.25rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  
+  .player-meta strong {
+    color: var(--fg);
+    font-weight: 600;
+  }
+  
+  /* Center info */
+  .center-info {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    background: 
+      radial-gradient(ellipse at center top, rgba(232, 182, 71, 0.08), transparent 70%),
+      linear-gradient(180deg, var(--felt-dark), var(--bg-3));
+    border: 1px solid var(--border-strong);
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .center-info::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  
+  .break-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 3.5px;
+    color: var(--muted);
+    margin-bottom: 0.25rem;
+  }
+  
+  .break-value {
+    font-family: 'Anton', sans-serif;
+    font-size: clamp(3rem, 6vw, 4.5rem);
+    line-height: 1;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0.25rem 0;
+    text-shadow: 0 0 30px rgba(232, 182, 71, 0.3);
+  }
+  
+  .ball-on {
+    font-size: 0.85rem;
+    color: var(--cream);
+    margin-top: 0.5rem;
+    padding: 0.35rem 0.85rem;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    display: inline-block;
+    margin-left: auto;
+    margin-right: auto;
+    align-self: center;
+  }
+  
+  .ball-on .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.4rem;
+    vertical-align: middle;
+    box-shadow: 0 0 8px currentColor;
+  }
+  
+  /* Balls section */
+  .balls-section {
+    background: 
+      radial-gradient(ellipse at center top, var(--felt-light), var(--felt) 40%, var(--felt-dark) 100%);
+    border: 1px solid rgba(0,0,0,0.5);
+    border-radius: 20px;
+    padding: 2.5rem 2rem 2.75rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    box-shadow: 
+      inset 0 2px 20px rgba(0,0,0,0.4),
+      inset 0 -2px 10px rgba(0,0,0,0.3),
+      0 15px 40px rgba(0,0,0,0.4);
+  }
+  
+  .balls-section::before {
+    content: '';
+    position: absolute;
+    inset: 10px;
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 14px;
+    pointer-events: none;
+  }
+  
+  .balls-section::after {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70%;
+    height: 30%;
+    background: radial-gradient(ellipse at center top, rgba(255,255,255,0.04), transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  
+  .balls-title {
+    text-align: center;
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(244, 234, 213, 0.45);
+    margin-bottom: 1.75rem;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .balls-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem 1.75rem;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .ball-btn {
+    position: relative;
+    width: 76px;
+    height: 76px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    padding: 0;
+  }
+  
+  .ball-btn:hover:not(:disabled) { transform: translateY(-6px); }
+  
+  .ball-btn:active:not(:disabled) { transform: translateY(-2px) scale(0.96); }
+  
+  .ball-btn:disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+  }
+  
+  .ball {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: relative;
+    box-shadow: 
+      0 8px 18px rgba(0,0,0,0.7),
+      0 2px 5px rgba(0,0,0,0.5),
+      inset 0 -8px 15px rgba(0,0,0,0.4);
+  }
+  
+  .ball::before {
+    content: '';
+    position: absolute;
+    top: 10%;
+    left: 18%;
+    width: 38%;
+    height: 32%;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.85), rgba(255,255,255,0.2) 50%, transparent 80%);
+    border-radius: 50%;
+    filter: blur(1px);
+    pointer-events: none;
+  }
+  
+  .ball::after {
+    content: attr(data-num);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 42%;
+    height: 42%;
+    background: linear-gradient(180deg, #fff, #e8e8e8);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1a1a1a;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    box-shadow: 
+      inset 0 -2px 4px rgba(0,0,0,0.15),
+      0 1px 2px rgba(0,0,0,0.2);
+  }
+  
+  .ball-btn.no-num .ball::after { display: none; }
+  
+  .ball-red {
+    background: radial-gradient(circle at 32% 28%, #ff6b6b, #d62828 45%, #6f0e0e 100%);
+  }
+  
+  .ball-yellow {
+    background: radial-gradient(circle at 32% 28%, #fff099, #f9c80e 45%, #7a6200 100%);
+  }
+  
+  .ball-green-ball {
+    background: radial-gradient(circle at 32% 28%, #6ee892, #2a9d3f 45%, #0e3a1c 100%);
+  }
+  
+  .ball-brown {
+    background: radial-gradient(circle at 32% 28%, #c98a4a, #7b3f1d 45%, #2d1408 100%);
+  }
+  
+  .ball-blue {
+    background: radial-gradient(circle at 32% 28%, #7eb5ff, #2563eb 45%, #0e1f5c 100%);
+  }
+  
+  .ball-pink {
+    background: radial-gradient(circle at 32% 28%, #ffb6d4, #ec4899 45%, #5c0e35 100%);
+  }
+  
+  .ball-black-ball {
+    background: radial-gradient(circle at 32% 28%, #5a5a5a, #18181b 45%, #000 100%);
+  }
+  
+  .ball-label {
+    position: absolute;
+    bottom: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    color: rgba(244, 234, 213, 0.7);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+  
+  .ball-label .pts {
+    color: var(--gold);
+    font-weight: 700;
+  }
+  
+  .ball-count {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    color: #1a1208;
+    font-weight: 800;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    min-width: 24px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    border: 1.5px solid var(--bg-3);
+  }
+  
+  /* Actions */
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.65rem;
+  }
+  
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(10px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 1.5rem;
+    animation: fadeIn 0.2s;
+  }
+  
+  .modal-overlay.active { display: flex; }
+  
+  .modal {
+    background: linear-gradient(180deg, var(--bg-2), var(--bg-3));
+    border: 1px solid var(--border-strong);
+    border-radius: 20px;
+    padding: 2rem;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+    animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.92) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  
+  .modal-title {
+    font-family: 'Anton', sans-serif;
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+    color: var(--gold);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  
+  .modal-text {
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+    font-size: 0.95rem;
+  }
+  
+  .modal-section {
+    margin-bottom: 1.25rem;
+  }
+  
+  .modal-section-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 0.6rem;
+  }
+  
+  .modal-actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+  }
+  
+  .player-select {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  
+  .player-select-btn {
+    padding: 0.85rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--fg);
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+  }
+  
+  .player-select-btn:hover { background: var(--card-hover); }
+  
+  .player-select-btn.selected {
+    background: rgba(232, 182, 71, 0.12);
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+  
+  .foul-balls {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .foul-ball {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.6rem 0.4rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--fg);
+    transition: all 0.2s;
+    font-family: 'Outfit', sans-serif;
+  }
+  
+  .foul-ball:hover { background: var(--card-hover); }
+  
+  .foul-ball.selected {
+    border-color: var(--gold);
+    background: rgba(232, 182, 71, 0.12);
+    box-shadow: 0 0 0 2px rgba(232, 182, 71, 0.2);
+  }
+  
+  .foul-ball .mini-ball {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    position: relative;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.5), inset 0 -3px 5px rgba(0,0,0,0.3);
+  }
+  
+  .foul-ball .mini-ball::before {
+    content: '';
+    position: absolute;
+    top: 12%;
+    left: 18%;
+    width: 35%;
+    height: 30%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.8), transparent 70%);
+    border-radius: 50%;
+  }
+  
+  .foul-ball .foul-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.2;
+  }
+  
+  .foul-ball.selected .foul-label { color: var(--gold); }
+  
+  .foul-ball .foul-pts {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  
+  /* History */
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 55vh;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    margin: 0 -0.5rem 0 0;
+  }
+  
+  .history-list::-webkit-scrollbar { width: 6px; }
+  .history-list::-webkit-scrollbar-track { background: transparent; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+  
+  .history-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    align-items: center;
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  
+  .history-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  
+  .history-icon::before {
+    content: '';
+    position: absolute;
+    top: 10%;
+    left: 18%;
+    width: 35%;
+    height: 30%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.6), transparent 70%);
+    border-radius: 50%;
+  }
+  
+  .history-text { font-size: 0.9rem; min-width: 0; }
+  
+  .history-text .label {
+    color: var(--muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 0.1rem;
+  }
+  
+  .history-text .desc {
+    color: var(--fg);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .history-points {
+    font-family: 'Anton', sans-serif;
+    color: var(--gold);
+    font-size: 1.15rem;
+    text-align: right;
+    min-width: 50px;
+  }
+  
+  .history-points.neg { color: #ff6b6b; }
+  
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(120px);
+    background: var(--bg-2);
+    border: 1px solid var(--gold);
+    color: var(--fg);
+    padding: 0.9rem 1.5rem;
+    border-radius: 12px;
+    z-index: 200;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.6), 0 0 20px rgba(232, 182, 71, 0.2);
+    font-weight: 500;
+    font-size: 0.9rem;
+    max-width: 90vw;
+  }
+  
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  
+  /* Frame end celebration */
+  .celebration {
+    text-align: center;
+    padding: 1rem;
+  }
+  
+  .celebration-trophy {
+    font-family: 'Anton', sans-serif;
+    font-size: 3rem;
+    color: var(--gold);
+    margin-bottom: 0.5rem;
+    text-shadow: 0 0 30px rgba(232, 182, 71, 0.5);
+  }
+  
+  .celebration-name {
+    font-family: 'Anton', sans-serif;
+    font-size: 2rem;
+    color: var(--cream);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 0.5rem;
+  }
+  
+  .celebration-score {
+    font-family: 'Anton', sans-serif;
+    font-size: 1.5rem;
+    color: var(--gold);
+  }
+  
+  /* Responsive */
+  @media (max-width: 720px) {
+    .container { padding: 1rem; }
+    .score-board {
+      grid-template-columns: 1fr 1fr;
+    }
+    .center-info {
+      grid-column: 1 / -1;
+      order: -1;
+      padding: 1rem;
+    }
+    .break-value { font-size: 2.5rem; }
+    .player-panel { padding: 1.25rem; }
+    .player-panel.active::after { 
+      top: 1rem; right: 1rem; 
+      font-size: 0.55rem; 
+      padding: 0.2rem 0.4rem;
+    }
+    .balls-section { padding: 2rem 1rem 2.5rem; }
+    .balls-grid { gap: 1.25rem 1.25rem; }
+    .ball-btn { width: 60px; height: 60px; }
+    .ball::after { font-size: 0.85rem; }
+    .frame-bar { 
+      grid-template-columns: 1fr; 
+      gap: 0.5rem;
+      text-align: center;
+    }
+    .frame-bar > div, .frame-bar > div:nth-child(2), .frame-bar > div:nth-child(3) { 
+      justify-content: center; 
+    }
+    .foul-balls { grid-template-columns: repeat(3, 1fr); }
+    .setup-form { padding: 1.5rem; }
+    .player-inputs { grid-template-columns: 1fr; }
+    .vs-badge { display: none; }
+    .modal { padding: 1.5rem; }
+  }
+  
+  @media (max-width: 480px) {
+    .ball-btn { width: 52px; height: 52px; }
+    .ball-label { font-size: 0.6rem; bottom: -20px; }
+    .ball::after { font-size: 0.75rem; }
+    .player-score { font-size: 3rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ SETUP SCREEN ============ -->
+<section id="setupScreen" class="setup-screen">
+  <div class="setup-hero">
+    <div class="setup-eyebrow">Frame by frame scoring</div>
+    <h1 class="setup-title">SNOOKER<br><span class="accent">SCORER</span></h1>
+    <p class="setup-subtitle">Track every pot, every break, every frame. Built for the table side.</p>
+  </div>
+  
+  <form class="setup-form" id="setupForm">
+    <div class="player-inputs">
+      <div class="input-group">
+        <label>Player One</label>
+        <input type="text" id="player1Input" placeholder="Name" required maxlength="18" autocomplete="off">
+      </div>
+      <div class="vs-badge">VS</div>
+      <div class="input-group">
+        <label>Player Two</label>
+        <input type="text" id="player2Input" placeholder="Name" required maxlength="18" autocomplete="off">
+      </div>
+    </div>
+    
+    <div class="frames-row">
+      <div class="input-group">
+        <label>Best of</label>
+        <select id="framesInput">
+          <option value="1">1 frame</option>
+          <option value="3">3 frames</option>
+          <option value="5" selected>5 frames</option>
+          <option value="7">7 frames</option>
+          <option value="9">9 frames</option>
+          <option value="11">11 frames</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>&nbsp;</label>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Start Match</button>
+      </div>
+    </div>
+  </form>
+  
+  <div class="recent-section">
+    <div class="recent-title">Recent Matches</div>
+    <div id="recentList" class="recent-list"></div>
+  </div>
+</section>
+
+<!-- ============ GAME SCREEN ============ -->
+<section id="gameScreen" class="container game-screen">
+  <header>
+    <div class="logo">SNOOKER<span class="gold">·</span>SCORER</div>
+    <div class="header-actions">
+      <button class="btn btn-secondary" id="historyBtn">History</button>
+      <button class="btn btn-ghost" id="exitBtn">Exit</button>
+    </div>
+  </header>
+  
+  <div class="frame-bar">
+    <div>
+      <span class="label">Frame</span>
+      <span class="value" id="frameNum">1</span>
+      <span style="color:var(--muted)">/ <span id="totalFrames">5</span></span>
+    </div>
+    <div>
+      <span class="reds-pill" id="redsRemaining">15 reds</span>
+    </div>
+    <div>
+      <span class="label">Match</span>
+      <span id="matchStatus" style="color:var(--fg);font-weight:600;">In progress</span>
+    </div>
+  </div>
+  
+  <div class="score-board">
+    <div class="player-panel" id="player1Panel">
+      <div class="player-name" id="player1Name">Player 1</div>
+      <div class="player-score" id="player1Score">0</div>
+      <div class="player-meta">
+        <span>Frames <strong id="player1Frames">0</strong></span>
+        <span>High <strong id="player1High">0</strong></span>
+      </div>
+    </div>
+    
+    <div class="center-info">
+      <div class="break-label">Current Break</div>
+      <div class="break-value" id="breakValue">0</div>
+      <div class="ball-on" id="ballOnText"><span class="dot" style="background:#d62828;color:#d62828;"></span>Red ball on</div>
+    </div>
+    
+    <div class="player-panel" id="player2Panel">
+      <div class="player-name" id="player2Name">Player 2</div>
+      <div class="player-score" id="player2Score">0</div>
+      <div class="player-meta">
+        <span>Frames <strong id="player2Frames">0</strong></span>
+        <span>High <strong id="player2High">0</strong></span>
+      </div>
+    </div>
+  </div>
+  
+  <div class="balls-section">
+    <div class="balls-title">Pot a Ball</div>
+    <div class="balls-grid" id="ballsGrid"></div>
+  </div>
+  
+  <div class="actions">
+    <button class="btn btn-secondary" id="missBtn">End Break</button>
+    <button class="btn btn-danger" id="foulBtn">Foul</button>
+    <button class="btn btn-secondary" id="undoBtn">Undo</button>
+    <button class="btn btn-secondary" id="endFrameBtn">End Frame</button>
+  </div>
+</section>
+
+<!-- ============ FOUL MODAL ============ -->
+<div class="modal-overlay" id="foulModal">
+  <div class="modal">
+    <h2 class="modal-title">Record Foul</h2>
+    
+    <div class="modal-section">
+      <div class="modal-section-label">Who Fouled?</div>
+      <div class="player-select" id="foulPlayerSelect">
+        <button class="player-select-btn" data-player="1" id="foulByP1">Player 1</button>
+        <button class="player-select-btn" data-player="2" id="foulByP2">Player 2</button>
+      </div>
+    </div>
+    
+    <div class="modal-section">
+      <div class="modal-section-label">Foul On</div>
+      <div class="foul-balls" id="foulBalls"></div>
+    </div>
+    
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="foulCancel">Cancel</button>
+      <button class="btn btn-primary" id="foulConfirm" disabled>Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CONFIRM MODAL ============ -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal" style="max-width: 420px;">
+    <h2 class="modal-title" id="confirmTitle">Confirm</h2>
+    <p class="modal-text" id="confirmText"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="confirmCancel">Cancel</button>
+      <button class="btn btn-danger" id="confirmOk">Yes, Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HISTORY MODAL ============ -->
+<div class="modal-overlay" id="historyModal">
+  <div class="modal" style="max-width: 600px;">
+    <h2 class="modal-title">Match History</h2>
+    <p class="modal-text" id="historySubtitle">All events this match, latest first</p>
+    <div class="history-list" id="historyList"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="historyClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME END MODAL ============ -->
+<div class="modal-overlay" id="frameEndModal">
+  <div class="modal">
+    <div class="celebration">
+      <div class="celebration-trophy" id="frameEndTrophy">★</div>
+      <div class="celebration-name" id="frameEndName">Player</div>
+      <div class="celebration-score" id="frameEndScore">0 - 0</div>
+      <div style="color:var(--muted);margin-top:0.5rem;font-size:0.85rem;" id="frameEndDetail">takes the frame</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="frameEndExit">End Match</button>
+      <button class="btn btn-primary" id="frameEndNext">Next Frame</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TOAST ============ -->
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================================
+// DATABASE LAYER
+// Clean abstraction over IndexedDB. Methods map cleanly to a
+// REST/SQL backend later — just swap the implementation.
+// =============================================================
+const DB_NAME = 'snooker_scorer';
+const DB_VERSION = 1;
+const STORE_MATCHES = 'matches';
+const STORE_EVENTS = 'events';
+
+const db = {
+  _db: null,
+
+  async init() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = (e) => {
+        const database = e.target.result;
+        if (!database.objectStoreNames.contains(STORE_MATCHES)) {
+          const s = database.createObjectStore(STORE_MATCHES, { keyPath: 'id' });
+          s.createIndex('status', 'status');
+          s.createIndex('startedAt', 'startedAt');
+        }
+        if (!database.objectStoreNames.contains(STORE_EVENTS)) {
+          const s = database.createObjectStore(STORE_EVENTS, { keyPath: 'id' });
+          s.createIndex('matchId', 'matchId');
+          s.createIndex('timestamp', 'timestamp');
+        }
+      };
+      req.onsuccess = (e) => { this._db = e.target.result; resolve(this._db); };
+      req.onerror = (e) => reject(e.target.error);
+    });
+  },
+
+  _store(name, mode = 'readonly') {
+    const tx = this._db.transaction(name, mode);
+    return tx.objectStore(name);
+  },
+
+  // Match CRUD
+  async createMatch(match) {
+    return new Promise((resolve, reject) => {
+      const r = this._store(STORE_MATCHES, 'readwrite').add(match);
+      r.onsuccess = () => resolve(match);
+      r.onerror = () => reject(r.error);
+    });
+  },
+
+  async updateMatch(match) {
+    return new Promise((resolve, reject) => {
+      const r = this._store(STORE_MATCHES, 'readwrite').put(match);
+      r.onsuccess = () => resolve(match);
+      r.onerror = () => reject(r.error);
+    });
+  },
+
+  async getMatch(id) {
+    return new Promise((resolve, reject) => {
+      const r = this._store(STORE_MATCHES).get(id);
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+  },
+
+  async listMatches() {
+    return new Promise((resolve, reject) => {
+      const r = this._store(STORE_MATCHES).getAll();
+      r.onsuccess = () => resolve((r.result || []).sort((a, b) => b.startedAt - a.startedAt));
+      r.onerror = () => reject(r.error);
+    });
+  },
+
+  // Event CRUD
+  async addEvent(event) {
+    return new Promise((resolve, reject) => {
+      const r = this._store(STORE_EVENTS, 'readwrite').add(event);
+      r.onsuccess = () => resolve(event);
+      r.onerror = () => reject(r.error);
+    });
+  },
+
+  async deleteEvent(id) {
+    return new Promise((resolve, reject) => {
+      const r = this._store(STORE_EVENTS, 'readwrite').delete(id);
+      r.onsuccess = () => resolve();
+      r.onerror = () => reject(r.error);
+    });
+  },
+
+  async getEvents(matchId) {
+    return new Promise((resolve, reject) => {
+      const idx = this._store(STORE_EVENTS).index('matchId');
+      const r = idx.getAll(matchId);
+      r.onsuccess = () => resolve((r.result || []).sort((a, b) => a.timestamp - b.timestamp));
+      r.onerror = () => reject(r.error);
+    });
+  },
+
+  async deleteMatch(id) {
+    return new Promise((resolve, reject) => {
+      const tx = this._db.transaction([STORE_MATCHES, STORE_EVENTS], 'readwrite');
+      tx.objectStore(STORE_MATCHES).delete(id);
+      const evIdx = tx.objectStore(STORE_EVENTS).index('matchId');
+      evIdx.openCursor(id).onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) { cursor.delete(); cursor.continue(); }
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+};
+
+// =============================================================
+// CONSTANTS
+// =============================================================
+const BALLS = {
+  red:    { value: 1, label: 'Red',    num: null,  cssClass: 'red' },
+  yellow: { value: 2, label: 'Yellow', num: 2,     cssClass: 'yellow' },
+  green:  { value: 3, label: 'Green',  num: 3,     cssClass: 'green-ball' },
+  brown:  { value: 4, label: 'Brown',  num: 4,     cssClass: 'brown' },
+  blue:   { value: 5, label: 'Blue',   num: 5,     cssClass: 'blue' },
+  pink:   { value: 6, label: 'Pink',   num: 6,     cssClass: 'pink' },
+  black:  { value: 7, label: 'Black',  num: 7,     cssClass: 'black-ball' }
+};
+
+const COLOR_SEQUENCE = ['yellow', 'green', 'brown', 'blue', 'pink', 'black'];
+
+const COLOR_HEX = {
+  red: '#d62828', yellow: '#f9c80e', green: '#2a9d3f',
+  brown: '#7b3f1d', blue: '#2563eb', pink: '#ec4899', black: '#18181b'
+};
+
+function uuid() {
+  return crypto.randomUUID ? crypto.randomUUID() :
+    Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
+// =============================================================
+// STATE
+// =============================================================
+const state = {
+  match: null,
+  events: [],
+  frame: null
+};
+
+function createFrameState() {
+  return {
+    currentPlayer: 1,
+    scores: { 1: 0, 2: 0 },
+    break: 0,
+    breakPlayer: 1,
+    redsRemaining: 15,
+    ballOn: 'red',          // 'red' | 'color' | 'final'
+    finalColorIndex: 0,
+    lastPot: null
+  };
+}
+
+// =============================================================
+// GAME LOGIC
+// =============================================================
+function potBall(color) {
+  const f = state.frame;
+  const ball = BALLS[color];
+  
+  // Validation
+  if (f.ballOn === 'red' && color !== 'red') {
+    toast('A red must be potted first'); return;
+  }
+  if (f.ballOn === 'color' && color === 'red') {
+    toast('A color must be potted after a red'); return;
+  }
+  if (f.ballOn === 'final' && color !== COLOR_SEQUENCE[f.finalColorIndex]) {
+    toast(`Must pot ${COLOR_SEQUENCE[f.finalColorIndex]} next`); return;
+  }
+  if (color === 'red' && f.redsRemaining <= 0) {
+    toast('No reds remaining'); return;
+  }
+  
+  // Apply
+  if (color === 'red') f.redsRemaining--;
+  f.scores[f.currentPlayer] += ball.value;
+  f.break += ball.value;
+  f.lastPot = color;
+  
+  // Determine next ball on
+  let frameOver = false;
+  if (color === 'red') {
+    f.ballOn = 'color';
+  } else if (f.ballOn === 'color') {
+    if (f.redsRemaining > 0) {
+      f.ballOn = 'red';
+    } else {
+      f.ballOn = 'final';
+      f.finalColorIndex = 0;
+    }
+  } else if (f.ballOn === 'final') {
+    f.finalColorIndex++;
+    if (f.finalColorIndex >= COLOR_SEQUENCE.length) frameOver = true;
+  }
+  
+  recordEvent({
+    type: 'pot',
+    player: f.currentPlayer,
+    ball: color,
+    value: ball.value,
+    timestamp: Date.now()
+  });
+  
+  bumpScore(f.currentPlayer);
+  render();
+  
+  if (frameOver) endFrame();
+}
+
+function recordMiss() {
+  const f = state.frame;
+  recordEvent({
+    type: 'miss',
+    player: f.currentPlayer,
+    timestamp: Date.now()
+  });
+  f.currentPlayer = f.currentPlayer === 1 ? 2 : 1;
+  f.breakPlayer = f.currentPlayer;
+  f.break = 0;
+  f.lastPot = null;
+  render();
+}
+
+function recordFoul(foulingPlayer, ballColor) {
+  const f = state.frame;
+  let value;
+  if (ballColor === 'general') {
+    value = 4;
+  } else {
+    value = Math.max(4, BALLS[ballColor].value);
+  }
+  
+  const opponent = foulingPlayer === 1 ? 2 : 1;
+  f.scores[opponent] += value;
+  f.currentPlayer = opponent;
+  f.breakPlayer = opponent;
+  f.break = 0;
+  f.lastPot = null;
+  
+  recordEvent({
+    type: 'foul',
+    player: foulingPlayer,
+    ball: ballColor,
+    value,
+    timestamp: Date.now()
+  });
+  
+  bumpScore(opponent);
+  render();
+}
+
+function undoLast() {
+  if (state.events.length === 0) { toast('Nothing to undo'); return; }
+  const last = state.events[state.events.length - 1];
+  if (last.type === 'frame_start') { toast('Cannot undo frame start'); return; }
+  if (last.type === 'frame_end') { toast('Cannot undo frame end'); return; }
+  
+  state.events.pop();
+  db.deleteEvent(last.id);
+  rebuildFrameState();
+  render();
+  toast('Undone');
+}
+
+function rebuildFrameState() {
+  // Find current frame's start
+  let startIdx = 0;
+  for (let i = state.events.length - 1; i >= 0; i--) {
+    if (state.events[i].type === 'frame_start') {
+      startIdx = i;
+      break;
+    }
+  }
+  
+  state.frame = createFrameState();
+  
+  for (let i = startIdx + 1; i < state.events.length; i++) {
+    const e = state.events[i];
+    const f = state.frame;
+    
+    if (e.type === 'pot') {
+      if (e.ball === 'red') f.redsRemaining--;
+      f.scores[e.player] += e.value;
+      f.currentPlayer = e.player;
+      f.breakPlayer = e.player;
+      f.break += e.value;
+      f.lastPot = e.ball;
+      
+      if (e.ball === 'red') {
+        f.ballOn = 'color';
+      } else if (f.ballOn === 'color') {
+        if (f.redsRemaining > 0) f.ballOn = 'red';
+        else { f.ballOn = 'final'; f.finalColorIndex = 0; }
+      } else if (f.ballOn === 'final') {
+        f.finalColorIndex++;
+      }
+    } else if (e.type === 'miss') {
+      f.currentPlayer = f.currentPlayer === 1 ? 2 : 1;
+      f.breakPlayer = f.currentPlayer;
+      f.break = 0;
+      f.lastPot = null;
+    } else if (e.type === 'foul') {
+      const opp = e.player === 1 ? 2 : 1;
+      f.scores[opp] += e.value;
+      f.currentPlayer = opp;
+      f.breakPlayer = opp;
+      f.break = 0;
+      f.lastPot = null;
+    }
+  }
+}
+
+function endFrame() {
+  const f = state.frame;
+  const s1 = f.scores[1], s2 = f.scores[2];
+  const winner = s1 > s2 ? 1 : s2 > s1 ? 2 : null;
+  
+  if (winner) state.match.players[winner].frames++;
+  
+  recordEvent({
+    type: 'frame_end',
+    winner,
+    scores: { ...f.scores },
+    timestamp: Date.now()
+  });
+  
+  // Check match end
+  const framesToWin = Math.ceil(state.match.totalFrames / 2) + (state.match.totalFrames % 2 === 0 ? 0 : 0);
+  const p1f = state.match.players[1].frames;
+  const p2f = state.match.players[2].frames;
+  
+  let matchOver = false;
+  let matchWinner = null;
+  
+  if (p1f > state.match.totalFrames / 2) { matchOver = true; matchWinner = 1; }
+  else if (p2f > state.match.totalFrames / 2) { matchOver = true; matchWinner = 2; }
+  else if (state.match.currentFrame >= state.match.totalFrames) {
+    matchOver = true;
+    matchWinner = p1f > p2f ? 1 : p2f > p1f ? 2 : null;
+  }
+  
+  if (matchOver) {
+    state.match.status = 'completed';
+    state.match.winner = matchWinner;
+    state.match.completedAt = Date.now();
+  } else {
+    state.match.currentFrame++;
+  }
+  
+  db.updateMatch(state.match);
+  showFrameEndModal(winner, matchOver, matchWinner);
+}
+
+function showFrameEndModal(frameWinner, matchOver, matchWinner) {
+  const modal = document.getElementById('frameEndModal');
+  const trophy = document.getElementById('frameEndTrophy');
+  const name = document.getElementById('frameEndName');
+  const score = document.getElementById('frameEndScore');
+  const detail = document.getElementById('frameEndDetail');
+  const nextBtn = document.getElementById('frameEndNext');
+  
+  const p1f = state.match.players[1].frames;
+  const p2f = state.match.players[2].frames;
+  
+  if (matchOver) {
+    trophy.textContent = '★';
+    if (matchWinner) {
+      name.textContent = state.match.players[matchWinner].name;
+      detail.textContent = 'wins the match';
+    } else {
+      name.textContent = 'Draw';
+      detail.textContent = 'match ended level';
+    }
+    score.textContent = `${p1f} — ${p2f}`;
+    nextBtn.textContent = 'New Match';
+  } else {
+    trophy.textContent = '✓';
+    if (frameWinner) {
+      name.textContent = state.match.players[frameWinner].name;
+      detail.textContent = 'takes the frame';
+    } else {
+      name.textContent = 'Tied Frame';
+      detail.textContent = 'scores level';
+    }
+    score.textContent = `${p1f} — ${p2f}`;
+    nextBtn.textContent = 'Next Frame';
+  }
+  
+  modal.classList.add('active');
+}
+
+function startNextFrame() {
+  state.frame = createFrameState();
+  recordEvent({
+    type: 'frame_start',
+    frame: state.match.currentFrame,
+    timestamp: Date.now()
+  });
+  document.getElementById('frameEndModal').classList.remove('active');
+  render();
+}
+
+function recordEvent(event) {
+  event.id = uuid();
+  event.matchId = state.match.id;
+  state.events.push(event);
+  db.addEvent(event);
+}
+
+// =============================================================
+// RENDERING
+// =============================================================
+function render() {
+  const m = state.match, f = state.frame;
+  if (!m || !f) return;
+  
+  document.getElementById('player1Name').textContent = m.players[1].name;
+  document.getElementById('player2Name').textContent = m.players[2].name;
+  document.getElementById('player1Score').textContent = f.scores[1];
+  document.getElementById('player2Score').textContent = f.scores[2];
+  document.getElementById('player1Frames').textContent = m.players[1].frames;
+  document.getElementById('player2Frames').textContent = m.players[2].frames;
+  document.getElementById('player1High').textContent = highestBreak(1);
+  document.getElementById('player2High').textContent = highestBreak(2);
+  
+  document.getElementById('player1Panel').classList.toggle('active', f.currentPlayer === 1);
+  document.getElementById('player2Panel').classList.toggle('active', f.currentPlayer === 2);
+  
+  document.getElementById('breakValue').textContent = f.break;
+  
+  // Ball on indicator
+  const ballOnEl = document.getElementById('ballOnText');
+  let text, dotColor;
+  if (f.ballOn === 'red') {
+    text = 'Red ball on'; dotColor = '#d62828';
+  } else if (f.ballOn === 'color') {
+    text = 'Color ball on'; dotColor = '#f9c80e';
+  } else {
+    const c = COLOR_SEQUENCE[f.finalColorIndex];
+    text = `${BALLS[c].label} ball on`; dotColor = COLOR_HEX[c];
+  }
+  ballOnEl.innerHTML = `<span class="dot" style="background:${dotColor};color:${dotColor};"></span>${text}`;
+  
+  document.getElementById('frameNum').textContent = m.currentFrame;
+  document.getElementById('totalFrames').textContent = m.totalFrames;
+  document.getElementById('redsRemaining').textContent = 
+    f.redsRemaining === 0 ? 'No reds left' : `${f.redsRemaining} red${f.redsRemaining !== 1 ? 's' : ''}`;
+  document.getElementById('matchStatus').textContent = 
+    m.status === 'completed' ? 'Completed' : 'In progress';
+  
+  renderBalls();
+}
+
+function renderBalls() {
+  const grid = document.getElementById('ballsGrid');
+  const f = state.frame;
+  grid.innerHTML = '';
+  
+  // Red ball
+  const redBtn = createBallButton('red');
+  const count = document.createElement('span');
+  count.className = 'ball-count';
+  count.textContent = f.redsRemaining;
+  redBtn.appendChild(count);
+  redBtn.disabled = f.redsRemaining === 0 || f.ballOn !== 'red';
+  redBtn.onclick = () => potBall('red');
+  grid.appendChild(redBtn);
+  
+  // Colors
+  for (const color of COLOR_SEQUENCE) {
+    const btn = createBallButton(color);
+    let disabled = false;
+    if (f.ballOn === 'red') disabled = true;
+    else if (f.ballOn === 'final') disabled = color !== COLOR_SEQUENCE[f.finalColorIndex];
+    btn.disabled = disabled;
+    btn.onclick = () => potBall(color);
+    grid.appendChild(btn);
+  }
+}
+
+function createBallButton(color) {
+  const btn = document.createElement('button');
+  const ball = BALLS[color];
+  btn.className = 'ball-btn' + (color === 'red' ? ' no-num' : '');
+  btn.innerHTML = `
+    <div class="ball ball-${ball.cssClass}" data-num="${ball.num || ''}"></div>
+    <div class="ball-label">${ball.label} <span class="pts">${ball.value}</span></div>
+  `;
+  return btn;
+}
+
+function bumpScore(player) {
+  const el = document.getElementById(`player${player}Score`);
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+}
+
+function highestBreak(player) {
+  let max = 0, current = 0;
+  for (const e of state.events) {
+    if (e.type === 'pot' && e.player === player) {
+      current += e.value;
+      if (current > max) max = current;
+    } else if (e.type === 'pot' && e.player !== player) {
+      current = 0;
+    } else if (e.type === 'miss' || e.type === 'foul' || e.type === 'frame_end' || e.type === 'frame_start') {
+      current = 0;
+    }
+  }
+  return max;
+}
+
+// =============================================================
+// HISTORY
+// =============================================================
+function showHistory() {
+  const list = document.getElementById('historyList');
+  const subtitle = document.getElementById('historySubtitle');
+  const events = state.events.filter(e => e.type !== 'frame_start');
+  
+  subtitle.textContent = `${events.length} events this match — latest first`;
+  
+  if (events.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:3rem 1rem;border:1px dashed var(--border);border-radius:12px;">No events yet. Pot a ball to begin.</div>';
+  } else {
+    list.innerHTML = events.slice().reverse().map(e => {
+      const playerName = state.match.players[e.player]?.name || '—';
+      let icon = '', label = '', desc = '', points = '', neg = false;
+      
+      if (e.type === 'pot') {
+        const ball = BALLS[e.ball];
+        icon = `<div class="history-icon ball ball-${ball.cssClass}" style="position:relative;"></div>`;
+        label = playerName;
+        desc = `Potted ${ball.label}`;
+        points = `+${e.value}`;
+      } else if (e.type === 'miss') {
+        icon = `<div class="history-icon" style="background:var(--card);border:1px solid var(--border-strong);color:var(--muted);">—</div>`;
+        label = playerName;
+        desc = 'Ended break (miss / safety)';
+      } else if (e.type === 'foul') {
+        icon = `<div class="history-icon" style="background:var(--red);color:#fff;">F</div>`;
+        label = playerName;
+        desc = `Foul on ${e.ball === 'general' ? 'general play' : BALLS[e.ball].label}`;
+        const opp = state.match.players[e.player === 1 ? 2 : 1].name;
+        points = `+${e.value} → ${opp.split(' ')[0]}`;
+      } else if (e.type === 'frame_end') {
+        const w = e.winner ? state.match.players[e.winner].name : 'Tie';
+        icon = `<div class="history-icon" style="background:var(--gold);color:#1a1208;">★</div>`;
+        label = 'Frame Complete';
+        desc = `${w} ${e.winner ? 'wins' : 'draws'} ${e.scores[1]}–${e.scores[2]}`;
+      }
+      
+      return `
+        <div class="history-item">
+          ${icon}
+          <div class="history-text">
+            <div class="label">${label}</div>
+            <div class="desc">${desc}</div>
+          </div>
+          <div class="history-points ${neg ? 'neg' : ''}">${points}</div>
+        </div>
+      `;
+    }).join('');
+  }
+  
+  document.getElementById('historyModal').classList.add('active');
+}
+
+// =============================================================
+// FOUL MODAL
+// =============================================================
+let foulSelection = { player: null, ball: null };
+
+function openFoulModal() {
+  foulSelection = { player: state.frame.currentPlayer, ball: null };
+  
+  // Pre-select the current player
+  document.getElementById('foulByP1').textContent = state.match.players[1].name;
+  document.getElementById('foulByP2').textContent = state.match.players[2].name;
+  document.getElementById('foulByP1').classList.toggle('selected', foulSelection.player === 1);
+  document.getElementById('foulByP2').classList.toggle('selected', foulSelection.player === 2);
+  
+  const ballsDiv = document.getElementById('foulBalls');
+  ballsDiv.innerHTML = '';
+  
+  // General + 7 balls
+  const options = [
+    { key: 'general', label: 'General', pts: 4, cssClass: null },
+    ...Object.entries(BALLS).map(([k, b]) => ({ 
+      key: k, label: b.label, pts: Math.max(4, b.value), cssClass: b.cssClass 
+    }))
+  ];
+  
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'foul-ball';
+    btn.innerHTML = `
+      <div class="mini-ball ${opt.cssClass ? 'ball ball-' + opt.cssClass : ''}" 
+           style="${!opt.cssClass ? 'background:linear-gradient(135deg,#3a3a3a,#1a1a1a);display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:800;font-size:0.7rem;' : ''}">
+        ${!opt.cssClass ? 'F' : ''}
+      </div>
+      <div class="foul-label">${opt.label}</div>
+      <div class="foul-pts">${opt.pts} pts</div>
+    `;
+    btn.onclick = () => {
+      document.querySelectorAll('.foul-ball').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      foulSelection.ball = opt.key;
+      updateFoulConfirm();
+    };
+    ballsDiv.appendChild(btn);
+  });
+  
+  updateFoulConfirm();
+  document.getElementById('foulModal').classList.add('active');
+}
+
+function updateFoulConfirm() {
+  const btn = document.getElementById('foulConfirm');
+  btn.disabled = !(foulSelection.player && foulSelection.ball);
+  if (foulSelection.player && foulSelection.ball) {
+    const pts = foulSelection.ball === 'general' ? 4 : Math.max(4, BALLS[foulSelection.ball].value);
+    const opp = state.match.players[foulSelection.player === 1 ? 2 : 1].name.split(' ')[0];
+    btn.textContent = `+${pts} to ${opp}`;
+  } else {
+    btn.textContent = 'Confirm';
+  }
+}
+
+// =============================================================
+// CONFIRM MODAL (replaces native confirm)
+// =============================================================
+function showConfirm(title, text, onConfirm) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmText').textContent = text;
+  document.getElementById('confirmModal').classList.add('active');
+  
+  const ok = document.getElementById('confirmOk');
+  const newOk = ok.cloneNode(true);
+  ok.parentNode.replaceChild(newOk, ok);
+  newOk.addEventListener('click', () => {
+    document.getElementById('confirmModal').classList.remove('active');
+    onConfirm();
+  });
+}
+
+// =============================================================
+// TOAST
+// =============================================================
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// =============================================================
+// RECENT MATCHES (Setup Screen)
+// =============================================================
+async function renderRecentMatches() {
+  const matches = await db.listMatches();
+  const container = document.getElementById('recentList');
+  
+  if (matches.length === 0) {
+    container.innerHTML = '<div class="recent-empty">No matches played yet — start one above.</div>';
+    return;
+  }
+  
+  const recent = matches.slice(0, 5);
+  container.innerHTML = recent.map(m => {
+    const p1 = m.players[1], p2 = m.players[2];
+    const winner = m.winner;
+    const p1Win = winner === 1, p2Win = winner === 2;
+    return `
+      <div class="recent-item" data-match-id="${m.id}">
+        <div>
+          <div class="recent-player ${p1Win ? 'recent-winner' : (winner ? 'recent-loser' : '')}">${p1.name}</div>
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <span class="recent-score">${p1.frames}</span>
+          <span style="color:var(--muted);font-size:0.85rem;">v</span>
+          <span class="recent-score">${p2.frames}</span>
+        </div>
+        <div class="recent-player right ${p2Win ? 'recent-winner' : (winner ? 'recent-loser' : '')}">${p2.name}</div>
+        <div class="recent-date">${timeAgo(m.startedAt)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// =============================================================
+// APP FLOW
+// =============================================================
+async function startMatch(p1Name, p2Name, totalFrames) {
+  const match = {
+    id: uuid(),
+    players: {
+      1: { name: p1Name, frames: 0 },
+      2: { name: p2Name, frames: 0 }
+    },
+    currentFrame: 1,
+    totalFrames,
+    startedAt: Date.now(),
+    status: 'active',
+    winner: null,
+    completedAt: null
+  };
+  
+  await db.createMatch(match);
+  state.match = match;
+  state.events = [];
+  state.frame = createFrameState();
+  
+  recordEvent({ type: 'frame_start', frame: 1, timestamp: Date.now() });
+  
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('gameScreen').classList.add('active');
+  render();
+}
+
+async function exitMatch() {
+  state.match = null;
+  state.events = [];
+  state.frame = null;
+  document.getElementById('gameScreen').classList.remove('active');
+  document.getElementById('setupScreen').style.display = 'flex';
+  renderRecentMatches();
+}
+
+// =============================================================
+// EVENT WIRING
+// =============================================================
+document.getElementById('setupForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const p1 = document.getElementById('player1Input').value.trim();
+  const p2 = document.getElementById('player2Input').value.trim();
+  const frames = parseInt(document.getElementById('framesInput').value, 10);
+  if (!p1 || !p2) { toast('Enter both player names'); return; }
+  if (p1.toLowerCase() === p2.toLowerCase()) { toast('Players need different names'); return; }
+  startMatch(p1, p2, frames);
+});
+
+document.getElementById('missBtn').addEventListener('click', recordMiss);
+document.getElementById('foulBtn').addEventListener('click', openFoulModal);
+document.getElementById('undoBtn').addEventListener('click', undoLast);
+document.getElementById('endFrameBtn').addEventListener('click', () => {
+  showConfirm('End Frame?', 'Award this frame to the player with the higher score?', () => {
+    endFrame();
+  });
+});
+
+document.getElementById('historyBtn').addEventListener('click', showHistory);
+document.getElementById('exitBtn').addEventListener('click', () => {
+  showConfirm('Exit Match?', 'Your match will be saved. You can view it in recent matches.', () => {
+    exitMatch();
+  });
+});
+
+// Foul modal
+document.getElementById('foulCancel').addEventListener('click', () => {
+  document.getElementById('foulModal').classList.remove('active');
+});
+document.getElementById('foulByP1').addEventListener('click', () => {
+  foulSelection.player = 1;
+  document.getElementById('foulByP1').classList.add('selected');
+  document.getElementById('foulByP2').classList.remove('selected');
+  updateFoulConfirm();
+});
+document.getElementById('foulByP2').addEventListener('click', () => {
+  foulSelection.player = 2;
+  document.getElementById('foulByP2').classList.add('selected');
+  document.getElementById('foulByP1').classList.remove('selected');
+  updateFoulConfirm();
+});
+document.getElementById('foulConfirm').addEventListener('click', () => {
+  if (!foulSelection.player || !foulSelection.ball) return;
+  recordFoul(foulSelection.player, foulSelection.ball);
+  document.getElementById('foulModal').classList.remove('active');
+});
+
+// Confirm modal
+document.getElementById('confirmCancel').addEventListener('click', () => {
+  document.getElementById('confirmModal').classList.remove('active');
+});
+
+// History modal
+document.getElementById('historyClose').addEventListener('click', () => {
+  document.getElementById('historyModal').classList.remove('active');
+});
+
+// Frame end modal
+document.getElementById('frameEndNext').addEventListener('click', () => {
+  if (state.match.status === 'completed') {
+    document.getElementById('frameEndModal').classList.remove('active');
+    exitMatch();
+  } else {
+    startNextFrame();
+  }
+});
+document.getElementById('frameEndExit').addEventListener('click', () => {
+  document.getElementById('frameEndModal').classList.remove('active');
+  exitMatch();
+});
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay && overlay.id !== 'frameEndModal') {
+      overlay.classList.remove('active');
+    }
+  });
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (!state.match || document.querySelector('.modal-overlay.active')) return;
+  const key = e.key.toLowerCase();
+  if (key === 'r') potBall('red');
+  else if (key === 'y') potBall('yellow');
+  else if (key === 'g') potBall('green');
+  else if (key === 'b') potBall('brown');
+  else if (key === 'u') potBall('blue');
+  else if (key === 'p') potBall('pink');
+  else if (key === 'k') potBall('black');
+  else if (key === 'm') recordMiss();
+  else if (key === 'f') openFoulModal();
+  else if (key === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); undoLast(); }
+});
+
+// =============================================================
+// INIT
+// =============================================================
+(async function init() {
+  try {
+    await db.init();
+    renderRecentMatches();
+  } catch (err) {
+    console.error('DB init failed', err);
+    toast('Storage unavailable — running in memory only');
+    renderRecentMatches();
+  }
+})();
+</script>
+</body>
+</html>

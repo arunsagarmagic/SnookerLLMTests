@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Snooker Scorer – One‑File App</title>
+<style>
+/* ──────────────────────────────────────────────────────────────────────── *
+   BASIC LAYOUT & RESPONSIVE STYLE
+   ──────────────────────────────────────────────────────────────────────── */
+body{
+    font-family:Arial,Helvetica,sans-serif;
+    margin:0;
+    background:#f5f5f5;
+    color:#222;
+}
+section{
+    max-width:800px;
+    margin:2rem auto;
+    padding:1rem;
+    background:#fff;
+    border-radius:8px;
+    box-shadow:0 2px 8px rgba(0,0,0,.1);
+}
+.hidden{display:none}
+
+/* ──────────────────────────────────────────────────────────────────────── *
+   SCOREBOARD
+   ──────────────────────────────────────────────────────────────────────── */
+#scoreboard{
+    text-align:center;
+    margin-bottom:1.5rem;
+}
+.scoreboard-inner{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:2rem;
+}
+.player{
+    padding:.5rem 1rem;
+    border-radius:6px;
+    background:#fafafa;
+    box-shadow:0 1px 4px rgba(0,0,0,.08);
+}
+.player h3{margin:0}
+.current-score{
+    font-size:2.5rem;
+    font-weight:bold;
+}
+
+/* ──────────────────────────────────────────────────────────────────────── *
+   BALL BOARD (SVG)
+   ──────────────────────────────────────────────────────────────────────── */
+#ball-board{
+    width:100%;
+    max-width:400px;
+    height:auto;
+    margin:auto;
+    cursor:pointer;
+}
+.ball{
+    transition:transform .1s;
+}
+.ball:hover{transform:scale(1.12)}
+.ball circle{
+    filter:drop-shadow(2px 2px 2px rgba(0,0,0,.2));
+}
+
+/* ──────────────────────────────────────────────────────────────────────── *
+   FORM
+   ──────────────────────────────────────────────────────────────────────── */
+#player-form label{
+    display:block;
+    margin-bottom:.5rem;
+}
+#player-form button{
+    margin-top:.5rem;
+    padding:.5rem 1rem;
+}
+</style>
+</head>
+<body>
+
+<!-- ──────────────────────────────────────────────────────────────────────── *
+     1️⃣  PLAYER SET‑UP SCREEN
+     ──────────────────────────────────────────────────────────────────────── -->
+<section id="setup-screen">
+    <h2>New Match</h2>
+    <form id="player-form">
+        <label>Player 1: <input name="player1" required></label>
+        <label>Player 2: <input name="player2" required></label>
+        <button type="submit">Start</button>
+    </form>
+</section>
+
+<!-- ──────────────────────────────────────────────────────────────────────── *
+     2️⃣  MATCH SCREEN (scoreboard + ball board)
+     ──────────────────────────────────────────────────────────────────────── -->
+<section id="match-screen" class="hidden">
+    <div id="scoreboard"></div>
+
+    <!-- SVG gradients – kept hidden, referenced by the balls later -->
+    <svg width="0" height="0" style="position:absolute;">
+        <defs>
+            <radialGradient id="grad-red"    cx="0.3" cy="0.3" r="0.9"><stop offset="0%"  stop-color="#ff4d4d"/><stop offset="100%" stop-color="#b20000"/></radialGradient>
+            <radialGradient id="grad-yellow" cx="0.3" cy="0.3" r="0.9"><stop offset="0%"  stop-color="#ffff66"/><stop offset="100%" stop-color="#bfbf00"/></radialGradient>
+            <radialGradient id="grad-green" cx="0.3" cy="0.3" r="0.9"><stop offset="0%"  stop-color="#66ff66"/><stop offset="100%" stop-color="#00b200"/></radialGradient>
+            <radialGradient id="grad-brown" cx="0.3" cy="0.3" r="0.9"><stop offset="0%"  stop-color="#d1a66b"/><stop offset="100%" stop-color="#8c5c2c"/></radialGradient>
+            <radialGradient id="grad-blue"   cx="0.3" cy="0.3" r="0.9"><stop offset="0%"  stop-color="#66ccff"/><stop offset="100%" stop-color="#0066cc"/></radialGradient>
+            <radialGradient id="grad-pink"   cx="0.3" cy="0.3" r="0.9"><stop offset="0%"  stop-color="#ff99ff"/><stop offset="100%" stop-color="#cc00cc"/></radialGradient>
+            <radialGradient id="grad-black" cx="0.3" cy="0.3" r="0.9"><stop offset="0%"  stop-color="#777777"/><stop offset="100%" stop-color="#111111"/></radialGradient>
+        </defs>
+    </svg>
+
+    <svg id="ball-board" viewBox="-100 -100 200 200"></svg>
+</section>
+
+<script type="module">
+
+/* ──────────────────────────────────────────────────────────────────────── *
+   0️⃣  QUICK UTILS
+   ──────────────────────────────────────────────────────────────────────── */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+/* ──────────────────────────────────────────────────────────────────────── *
+   1️⃣  DOMAIN MODELS (Match, Frame, Shot, Break)
+   ──────────────────────────────────────────────────────────────────────── */
+class Shot{
+    constructor({ball,foul,playerId,timestamp=Date.now()}){
+        this.id = crypto.randomUUID();
+        this.ball = ball;               // "red", "yellow", … "black", "cue"
+        this.foul = !!foul;
+        this.playerId = playerId;
+        this.timestamp = timestamp;
+        this.points = Shot.pointsFor(ball,foul);
+    }
+    static pointsFor(ball,foul){
+        const values={red:1,yellow:2,green:3,brown:4,blue:5,pink:6,black:7};
+        return foul ? Math.max(4, values[ball]||0) : values[ball]||0;
+    }
+}
+
+class Break{
+    constructor({playerId}){
+        this.id = crypto.randomUUID();
+        this.playerId = playerId;
+        this.shots = [];   // shot ids
+        this.points = 0;
+    }
+    addShot(shot){
+        this.shots.push(shot.id);
+        this.points += shot.points;
+    }
+}
+
+class Frame{
+    constructor({playerIds}){
+        this.id = crypto.randomUUID();
+        this.playerIds = playerIds;           // [p1,p2]
+        this.shots = [];                      // shot ids ordered
+        this.breaks = [];                     // finished Break objects
+        this.currentBreak = null;             // ongoing Break
+        this.finished = false;
+        this.winner = null;
+        this.scores = {};
+        playerIds.forEach(p=>this.scores[p]=0);
+    }
+    addShot(shot){
+        this.shots.push(shot.id);
+        this.scores[shot.playerId] += shot.points;
+
+        // Break handling – simple version
+        if (!this.currentBreak) this.currentBreak = new Break({playerId:shot.playerId});
+        if (shot.foul || shot.ball==="cue"){
+            this.breaks.push(this.currentBreak);
+            this.currentBreak = null;
+        }else{
+            this.currentBreak.addShot(shot);
+        }
+    }
+    finish(winnerId){
+        this.finished = true;
+        this.winner = winnerId;
+    }
+}
+
+class Match{
+    constructor({player1,player2,bestOf=3}){
+        this.id = crypto.randomUUID();
+        /** map<playerId, name> */
+        this.players = {
+            [crypto.randomUUID()]: player1,
+            [crypto.randomUUID()]: player2
+        };
+        this.bestOf = bestOf;
+        this.frames = [];               // frame ids
+        this.currentFrame = null;       // Frame object (live)
+        this.finished = false;
+        this.winner = null;
+        this.result = {};               // frames won per playerId
+        Object.keys(this.players).forEach(p=>this.result[p]=0);
+    }
+    startNewFrame(){
+        const frame = new Frame({playerIds:Object.keys(this.players)});
+        this.currentFrame = frame;
+        this.frames.push(frame.id);
+        return frame;
+    }
+    recordFrameResult(frame){
+        const win = frame.winner;
+        this.result[win] += 1;
+        if (this.result[win] > Math.floor(this.bestOf/2)){
+            this.finished = true;
+            this.winner = win;
+        }
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────────────── *
+   2️⃣  DATABASE INTERFACE – ONLY ONE IMPLEMENTATION (IndexedDB)          *
+   ──────────────────────────────────────────────────────────────────────── */
+const DB = {
+    /* ----------  IndexedDB plumbing ---------- */
+    _db:null,
+    async _open(){
+        if(this._db) return this._db;
+        const req = indexedDB.open('SnookerScorer',1);
+        req.onupgradeneeded = e=>{
+            const db = e.target.result;
+            db.createObjectStore('matches',{keyPath:'id'});
+            db.createObjectStore('frames',{keyPath:'id'});
+            db.createObjectStore('shots',{keyPath:'id'});
+        };
+        return new Promise((res,rej)=>{
+            req.onsuccess = ()=>{ this._db=req.result; res(this._db); };
+            req.onerror = ()=>rej(req.error);
+        });
+    },
+    async _tx(store,mode='readonly'){
+        const db = await this._open();
+        const tx = db.transaction(store,mode);
+        const s = tx.objectStore(store);
+        return {tx,s};
+    },
+
+    /* ----------  CRUD FOR MATCHES ---------- */
+    async createMatch(match){ const {s}=await this._tx('matches','readwrite'); s.put(match); return match; },
+    async getMatch(id){ const {s}=await this._tx('matches'); return s.get(id).onsuccess?await new Promise(r=>{s.get(id).onsuccess=e=>r(e.target.result);}) : null; },
+    async updateMatch(match){ const {s}=await this._tx('matches','readwrite'); s.put(match); return match; },
+
+    /* ----------  CRUD FOR FRAMES ---------- */
+    async createFrame(frame,matchId){
+        const {s}=await this._tx('frames','readwrite');
+        s.put(frame);
+        const match = await this.getMatch(matchId);
+        match.frames = match.frames || [];
+        match.frames.push(frame.id);
+        await this.updateMatch(match);
+        return frame;
+    },
+    async getFrame(id){ const {s}=await this._tx('frames'); return new Promise(r=>{s.get(id).onsuccess=e=>r(e.target.result);}); },
+    async updateFrame(frame){ const {s}=await this._tx('frames','readwrite'); s.put(frame); return frame; },
+
+    /* ----------  CRUD FOR SHOTS ---------- */
+    async createShot(shot,frameId){
+        const {s}=await this._tx('shots','readwrite');
+        s.put(shot);
+        // update frame scores atomically
+        const frame = await this.getFrame(frameId);
+        frame.shots = frame.shots || [];
+        frame.shots.push(shot.id);
+        frame.scores[shot.playerId] += shot.points;
+
+        if (!frame.currentBreak) frame.currentBreak = new Break({playerId:shot.playerId});
+        if (shot.foul){
+            frame.breaks.push(frame.currentBreak);
+            frame.currentBreak = null;
+        }else{
+            frame.currentBreak.addShot(shot);
+        }
+        await this.updateFrame(frame);
+        return shot;
+    },
+    async getShot(id){ const {s}=await this._tx('shots'); return new Promise(r=>{s.get(id).onsuccess=e=>r(e.target.result);}); },
+
+    async listShotsByFrame(frameId){
+        const frame = await this.getFrame(frameId);
+        if(!frame) return [];
+        const promises = frame.shots.map(id=>this.getShot(id));
+        const shots = await Promise.all(promises);
+        shots.sort((a,b)=>a.timestamp-b.timestamp);
+        return shots;
+    },
+
+    /* ----------  DEV ---------- */
+    async clearAll(){
+        const db = await this._open();
+        ['matches','frames','shots'].forEach(st=>{
+            const tx = db.transaction(st,'readwrite');
+            tx.objectStore(st).clear();
+        });
+    }
+};
+
+/* ──────────────────────────────────────────────────────────────────────── *
+   3️⃣  UI COMPONENTS
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* ----- 1️⃣ Player entry form ----- */
+function initPlayerForm(){
+    $('#player-form').addEventListener('submit', async e=>{
+        e.preventDefault();
+        const p1 = e.target.elements.player1.value.trim();
+        const p2 = e.target.elements.player2.value.trim();
+        if(!p1||!p2) return alert('Both names required');
+        const match = new Match({player1:p1,player2:p2,bestOf:3});
+        await DB.createMatch(match);
+        location.hash = `#match/${match.id}`;
+    });
+}
+
+/* ----- 2️⃣ Scoreboard ----- */
+function renderScoreboard(match){
+    const container = $('#scoreboard');
+    const ids = Object.keys(match.players);
+    const html = `
+        <div class="scoreboard-inner">
+            <div class="player" data-id="${ids[0]}">
+                <h3>${match.players[ids[0]]}</h3>
+                <p>Frames: ${match.result[ids[0]]||0}</p>
+                <p class="current-score" id="live-${ids[0]}">0</p>
+            </div>
+            <div class="versus">vs</div>
+            <div class="player" data-id="${ids[1]}">
+                <h3>${match.players[ids[1]]}</h3>
+                <p>Frames: ${match.result[ids[1]]||0}</p>
+                <p class="current-score" id="live-${ids[1]}">0</p>
+            </div>
+        </div>`;
+    container.innerHTML = html;
+}
+function updateLiveScore(frame){
+    frame.playerIds = Object.keys(frame.scores);
+    frame.playerIds.forEach(pId=>{
+        const el = $('#live-'+pId);
+        if(el) el.textContent = frame.scores[pId];
+    });
+}
+
+/* ----- 3️⃣ Ball board (SVG) ----- */
+const BALLS = [
+    {id:'red',    points:1,   grad:'grad-red'},
+    {id:'yellow', points:2,   grad:'grad-yellow'},
+    {id:'green',  points:3,   grad:'grad-green'},
+    {id:'brown',  points:4,   grad:'grad-brown'},
+    {id:'blue',   points:5,   grad:'grad-blue'},
+    {id:'pink',   points:6,   grad:'grad-pink'},
+    {id:'black',  points:7,   grad:'grad-black'},
+];
+const CUE = {id:'cue', points:0};
+
+function initBallBoard(matchId, frame){
+    const board = $('#ball-board');
+    board.innerHTML='';   // clear any previous balls
+    const ns = 'http://www.w3.org/2000/svg';
+
+    // Create coloured balls
+    BALLS.forEach(b=>{
+        const g = document.createElementNS(ns,'g');
+        g.classList.add('ball','ball-'+b.id);
+        g.dataset.ball = b.id;
+        g.dataset.points = b.points;
+        const circ = document.createElementNS(ns,'circle');
+        circ.setAttribute('r','15');
+        circ.setAttribute('fill',`url(#${b.grad})`);
+        g.appendChild(circ);
+        board.appendChild(g);
+    });
+    // Cue ball (white)
+    const cueG = document.createElementNS(ns,'g');
+    cueG.classList.add('ball','ball-cue');
+    cueG.dataset.ball='cue';
+    const cueCirc = document.createElementNS(ns,'circle');
+    cueCirc.setAttribute('r','15');
+    cueCirc.setAttribute('fill','#fff');
+    cueG.appendChild(cueCirc);
+    board.appendChild(cueG);
+
+    // -------- Interaction ----------
+    const playerIds = Object.keys(frame.scores);
+    let curIdx = 0;                               // start with first player
+    const curPlayer = ()=>playerIds[curIdx];
+
+    board.addEventListener('click', async ev=>{
+        const target = ev.target.closest('.ball');
+        if(!target) return;
+        const ballId = target.dataset.ball;
+        const isCue = ballId==='cue';
+        // Simple UI – confirm if the shot was a foul (except cue ball)
+        const foul = (!isCue) && confirm('Was this shot a foul? (OK = foul)');
+        const shot = new Shot({ball:ballId,foul,playerId:curPlayer()});
+        await DB.createShot(shot,frame.id);
+        // Refresh UI after the shot
+        await refreshAfterShot(frame, matchId);
+        // Switch player turn (unless the shot was a foul – the opponent gets ball‑in‑hand)
+        if(!foul) curIdx = 1-curIdx;
+    });
+}
+
+/* ----- Helpers after each shot ----- */
+async function refreshAfterShot(frame, matchId){
+    const freshFrame = await DB.getFrame(frame.id);
+    updateLiveScore(freshFrame);
+
+    // ------ Ball removal logic (reds disappear when potted) ------
+    const shots = await DB.listShotsByFrame(frame.id);
+    const redsPotted = shots.filter(s=>s.ball==='red' && !s.foul).length;
+    $$('.ball-red').forEach(el=>el.style.display = redsPotted>0 ? 'block':'none');
+
+    // ------ End‑of‑frame detection (very simple) ------
+    // Full snooker has 21 legal pots (15 reds + 6 colours)
+    const legalPotCount = shots.filter(s=>!s.foul && s.ball!=='cue').length;
+    if (legalPotCount >= 21){
+        // decide winner from scores
+        const ids = Object.keys(freshFrame.scores);
+        const winner = freshFrame.scores[ids[0]] > freshFrame.scores[ids[1]] ? ids[0] : ids[1];
+        freshFrame.finish(winner);
+        await DB.updateFrame(freshFrame);
+
+        const match = await DB.getMatch(matchId);
+        match.recordFrameResult(freshFrame);
+        await DB.updateMatch(match);
+
+        alert(`Frame finished – ${match.players[winner]} wins the frame!`);
+        if (!match.finished){
+            const next = match.startNewFrame();
+            await DB.createFrame(next, match.id);
+            location.reload();   // for the demo we just reload; a SPA could stay on the page
+        }else{
+            alert(`Match over – ${match.players[match.winner]} wins ${match.bestOf}-frame match.`);
+            location.hash = '';   // back to home screen
+        }
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────────────── *
+   4️⃣  ROUTER (hash‑based)
+   ──────────────────────────────────────────────────────────────────────── */
+function show(section){ $$(‘section’).forEach(s=>s.classList.add('hidden')); section.classList.remove('hidden'); }
+
+function router(){
+    const h = location.hash || '#';
+    const [,page, id] = h.split('/');
+    if(!page){               // home screen
+        show($('#setup-screen'));
+        return;
+    }
+    if(page==='match'){
+        (async()=>{
+            const match = await DB.getMatch(id);
+            if(!match){ alert('Match not found'); location.hash=''; return; }
+            // ensure we have a current frame
+            let frame = match.currentFrame;
+            if(!frame){
+                frame = match.startNewFrame();
+                await DB.createFrame(frame, match.id);
+                await DB.updateMatch(match);
+            }
+            show($('#match-screen'));
+            renderScoreboard(match);
+            initBallBoard(match.id, frame);
+        })();
+    }else{
+        show($('#setup-screen'));
+    }
+}
+window.addEventListener('hashchange', router);
+window.addEventListener('load', router);
+
+/* ──────────────────────────────────────────────────────────────────────── *
+   5️⃣  INITIALISE APP
+   ──────────────────────────────────────────────────────────────────────── */
+initPlayerForm();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,229 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Snooker Scorekeeper</title>
+<style>
+/* ----------------------------------------------------------- */
+/* Basic page layout */
+body {font-family:Arial,Helvetica,sans-serif;margin:0;padding:0;background:#f0f0f0;}
+#root{max-width:800px;margin:20px auto;padding:0 10px;}
+h2 {text-align:center;}
+
+/* ----------------------------------------------------------- */
+/* Player / Score section */
+#scores{
+  background:#fff; padding:10px; margin-bottom:10px;
+  display:flex; justify-content:space-between;
+  align-items:center;
+}
+#scores div{font-size:1.2rem;}
+#scores button{padding:5px 10px;background:#d33;color:#fff;border:none;cursor:pointer;border-radius:3px;}
+#scores button:hover{background:#b22;}
+/* ----------------------------------------------------------- */
+/* Board – ball icons (radial‑gradient circles) */
+#board{display:flex; flex-wrap:wrap; justify-content:center; gap:8px;}
+.ball{
+  width:80px;height:80px;border-radius:50%;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:0.8rem;color:#fff;
+  transition:transform .1s;
+}
+.ball:hover{transform:scale(1.1);}
+.red   {background:radial-gradient(circle at 30% 30%, #ffe5e5 0%, #b30000 100%);}
+.yellow{background:radial-gradient(circle at 30% 30%, #fffbe5 0%, #cc9900 100%);}
+.green {background:radial-gradient(circle at 30% 30%, #e5ffe5 0%, #004d00 100%);}
+.brown {background:radial-gradient(circle at 30% 30%, #ffe5cc 0%, #7f3f00 100%);}
+.blue  {background:radial-gradient(circle at 30% 30%, #e5e5ff 0%, #00007f 100%);}
+.pink  {background:radial-gradient(circle at 30% 30%, #ffe5f1 0%, #d10079 100%);}
+.black {background:radial-gradient(circle at 30% 30%, #e0e0e0 0%, #333 100%);}
+
+/* ----------------------------------------------------------- */
+/* History log */
+#history{background:#fff;padding:10px;}
+#history h3{margin:0 0 5px;}
+#historyList{list-style:none;margin:0;padding:0;}
+#historyList li{padding:2px 0;border-bottom:1px solid #eee;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+/* ============================== */
+/*  Helper: Small IndexedDB Wrapper
+/* ============================== */
+const DB_NAME = 'snookerScoreDB';
+const DB_VERSION = 1;
+const STORE_PLAYER = 'player';
+const STORE_POINTS = 'points';
+const STORE_HISTORY = 'history';
+
+function openDB() {
+  return new Promise((resolve,reject)=>{
+    const r = indexedDB.open(DB_NAME,DB_VERSION);
+    r.onerror = ()=>reject(r.error);
+    r.onsuccess = ()=>resolve(r.result);
+    r.onupgradeneeded = e=>{
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_PLAYER))
+        db.createObjectStore(STORE_PLAYER,{keyPath:'id'});
+      if (!db.objectStoreNames.contains(STORE_POINTS))
+        db.createObjectStore(STORE_POINTS,{autoIncrement:true});
+      if (!db.objectStoreNames.contains(STORE_HISTORY))
+        db.createObjectStore(STORE_HISTORY,{autoIncrement:true});
+    };
+  });
+}
+
+/* Players ---------------------------------------------------- */
+async function setPlayers(a,b){
+  const db = await openDB();
+  return new Promise(resolve=>{
+    const tx = db.transaction(STORE_PLAYER,'readwrite');
+    tx.objectStore(STORE_PLAYER).put({id:'a',name:a});
+    tx.objectStore(STORE_PLAYER).put({id:'b',name:b});
+    tx.oncomplete = ()=>resolve();
+  });
+}
+async function getPlayers(){
+  const db = await openDB();
+  return new Promise(resolve=>{
+    const tx = db.transaction(STORE_PLAYER,'readonly');
+    const r = tx.objectStore(STORE_PLAYER).getAll();
+    r.onsuccess = ()=>{ const [pA,pB] = r.result; resolve({a:pA?.name,b:pB?.name}); };
+  });
+}
+
+/* Pots / Score ----------------------------------------------- */
+const BALL_VALUES = {
+  red:1, yellow:2, green:3, brown:4, blue:5, pink:6, black:7
+};
+async function recordPot(playerId,colour){
+  const db = await openDB();
+  return new Promise(resolve=>{
+    const tx = db.transaction([STORE_POINTS,STORE_HISTORY],'readwrite');
+    const val = BALL_VALUES[colour];
+    tx.objectStore(STORE_POINTS).add({playerId,colour,points:val,time:Date.now()});
+    tx.objectStore(STORE_HISTORY).add({playerId,colour,points:val,time:Date.now()});
+    tx.oncomplete = ()=>resolve();
+  });
+}
+async function getPoints(){
+  const db = await openDB();
+  return new Promise(resolve=>{
+    const tx = db.transaction(STORE_POINTS,'readonly');
+    const r = tx.objectStore(STORE_POINTS).getAll();
+    r.onsuccess = ()=>resolve(r.result);
+  });
+}
+
+/* History ----------------------------------------------------- */
+async function getHistory(){
+  const db = await openDB();
+  return new Promise(resolve=>{
+    const tx = db.transaction(STORE_HISTORY,'readonly');
+    const r = tx.objectStore(STORE_HISTORY).getAll();
+    r.onsuccess = ()=>resolve(r.result);
+  });
+}
+async function clearAll(){
+  const db = await openDB();
+  return new Promise(resolve=>{
+    const tx = db.transaction([STORE_PLAYER,STORE_POINTS,STORE_HISTORY],'readwrite');
+    tx.objectStore(STORE_PLAYER).clear();
+    tx.objectStore(STORE_POINTS).clear();
+    tx.objectStore(STORE_HISTORY).clear();
+    tx.oncomplete = ()=>resolve();
+  });
+}
+
+/* ===================== */
+/*  UI & Application Code
+/* ===================== */
+const root = document.getElementById('root');
+const BALLS = ['red','yellow','green','brown','blue','pink','black'];
+
+// ----- Player setup (first load) ------------------------------
+async function renderSetup(){
+  root.innerHTML = `
+    <h2>Enter Player Names</h2>
+    <label>Player 1: <input id="p1" type="text"></label><br><br>
+    <label>Player 2: <input id="p2" type="text"></label><br><br>
+    <button id="saveBtn">Save</button>
+  `;
+  document.getElementById('saveBtn').onclick = async ()=>{
+    const a = document.getElementById('p1').value.trim();
+    const b = document.getElementById('p2').value.trim();
+    if(!a||!b){alert('Both names are required.'); return;}
+    await setPlayers(a,b);
+    renderApp();
+  };
+}
+
+// ----- Main game screen ---------------------------------------
+async function renderApp(){
+  const {a,b} = await getPlayers();
+  const scores = await getPoints();
+  const hs = scores.reduce((m,s)=>{m[s.playerId] = (m[s.playerId]||0)+s.points; return m;},{});
+  root.innerHTML = `
+    <div id="scores">
+      <div>${a}: <span id="scoreA">${hs.a||0}</span></div>
+      <div>${b}: <span id="scoreB">${hs.b||0}</span></div>
+      <button id="resetBtn">Reset Game</button>
+    </div>
+    <div id="board"></div>
+    <div id="history">
+      <h3>History</h3>
+      <ul id="historyList"></ul>
+    </div>`;
+  drawBoard(a,b);
+  renderHistory(await getHistory());
+  document.getElementById('resetBtn').onclick = async ()=>{
+    if(!confirm('Delete all data for this game?')) return;
+    await clearAll();
+    renderSetup();
+  };
+}
+
+// ----- Render the colored ball icons ---------------------------
+function drawBoard(a,b){
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  const turn = {current:'a',next:'b'}; // simple toggle; can be expanded
+
+  BALLS.forEach(col=>{
+    const d = document.createElement('div');
+    d.className = `ball ${col}`;
+    d.title = `${col.charAt(0).toUpperCase()+col.slice(1)} (${BALL_VALUES[col]})`;
+    d.onclick = async ()=>{
+      await recordPot(turn.current,col);
+      turn.current = turn.current==='a'?'b':'a'; // alternate
+      renderApp();
+    };
+    board.appendChild(d);
+  });
+}
+
+// ----- Render the history list ---------------------------------
+function renderHistory(hist){
+  const ul = document.getElementById('historyList');
+  ul.innerHTML = '';
+  const {a,b} = await getPlayers();
+  hist.sort((x,y)=>x.time-y.time).forEach(e=>{
+    const li = document.createElement('li');
+    const t = new Date(e.time).toLocaleTimeString();
+    li.textContent = `${t} – ${e.playerId==='a'?a:b} pot ${e.colour} (${e.points})`;
+    ul.appendChild(li);
+  });
+}
+
+// ----- Bootstrap ------------------------------------------------
+document.addEventListener('DOMContentLoaded', async ()=>{
+  const {a,b} = await getPlayers();
+  if(!a||!b) renderSetup(); else renderApp();
+});
+</script>
+</body>
+</html>

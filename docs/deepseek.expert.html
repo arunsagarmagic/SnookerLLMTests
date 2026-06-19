@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snooker Scorer</title>
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --surface: #16213e;
+            --surface2: #0f3460;
+            --gold: #e2b04a;
+            --text: #e8e8e8;
+            --text-muted: #a0a0b8;
+            --player1-accent: #4da6ff;
+            --player2-accent: #ff6b6b;
+            --success: #4caf84;
+            --danger: #e05555;
+            --ball-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            --radius: 16px;
+            --transition: 0.2s ease;
+            --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 16px;
+            background-image:
+                radial-gradient(ellipse at 50% 0%, #1a3a5c 0%, transparent 60%),
+                radial-gradient(ellipse at 50% 100%, #0d1b2a 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding-bottom: 40px;
+        }
+
+        /* Header */
+        .app-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .app-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #e2b04a, #f5d78c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 9px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all var(--transition);
+            background: var(--surface2);
+            color: var(--text);
+            white-space: nowrap;
+            letter-spacing: 0.01em;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn:hover {
+            background: #1a4478;
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        .btn:active {
+            transform: scale(0.97);
+            transition: 0.08s ease;
+        }
+        .btn-accent {
+            background: #c8943e;
+            border-color: #c8943e;
+            color: #1a1a2e;
+            font-weight: 700;
+        }
+        .btn-accent:hover {
+            background: #d4a54e;
+            border-color: #d4a54e;
+        }
+        .btn-danger {
+            background: #8b2c2c;
+            border-color: #a33;
+            color: #fcc;
+        }
+        .btn-danger:hover {
+            background: #a33;
+        }
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.78rem;
+            border-radius: 7px;
+        }
+        .btn-xs {
+            padding: 3px 8px;
+            font-size: 0.7rem;
+            border-radius: 6px;
+        }
+        .btn:disabled {
+            opacity: 0.45;
+            pointer-events: none;
+            filter: grayscale(30%);
+        }
+
+        /* Scoreboard */
+        .scoreboard {
+            display: flex;
+            gap: 12px;
+            align-items: stretch;
+            flex-wrap: wrap;
+        }
+        .score-panel {
+            flex: 1;
+            min-width: 140px;
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 20px 16px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.35s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .score-panel.active-player {
+            border-color: #e2b04a;
+            box-shadow: 0 0 30px rgba(226, 176, 74, 0.25), 0 0 60px rgba(226, 176, 74, 0.08);
+            animation: activeGlow 2s ease-in-out infinite;
+        }
+        @keyframes activeGlow {
+            0%,
+            100% {
+                box-shadow: 0 0 30px rgba(226, 176, 74, 0.25), 0 0 60px rgba(226, 176, 74, 0.08);
+            }
+            50% {
+                box-shadow: 0 0 45px rgba(226, 176, 74, 0.4), 0 0 80px rgba(226, 176, 74, 0.15);
+            }
+        }
+        .score-panel .player-name {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        .score-panel .player-score {
+            font-size: 4.5rem;
+            font-weight: 900;
+            font-family: var(--font-mono);
+            line-height: 1;
+            letter-spacing: -0.04em;
+            transition: all 0.25s ease;
+        }
+        .score-panel.player1 .player-score {
+            color: var(--player1-accent);
+        }
+        .score-panel.player2 .player-score {
+            color: var(--player2-accent);
+        }
+        .score-panel .player-break {
+            font-size: 0.85rem;
+            color: #e2b04a;
+            font-weight: 700;
+            margin-top: 2px;
+            min-height: 1.2em;
+            letter-spacing: 0.03em;
+        }
+        .score-divider {
+            display: flex;
+            align-items: center;
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+            padding: 0 4px;
+        }
+
+        /* Game info bar */
+        .game-info-bar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 10px 16px;
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .game-info-bar .info-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+        }
+        .game-info-bar .info-value {
+            color: var(--text);
+            font-weight: 700;
+        }
+        .phase-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .phase-red {
+            background: #8b0000;
+            color: #ffaaaa;
+        }
+        .phase-color {
+            background: #1a4478;
+            color: #aad4ff;
+        }
+        .phase-sequence {
+            background: #5c3d0e;
+            color: #ffe0a0;
+        }
+        .phase-finished {
+            background: #1a3a1a;
+            color: #a0e0a0;
+        }
+
+        /* Ball area */
+        .ball-section {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .ball-section h3 {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            text-align: center;
+        }
+        .reds-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .colors-row {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* 3D Ball */
+        .ball {
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+            transition: all var(--transition);
+            flex-shrink: 0;
+            border: none;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .ball::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            top: 18%;
+            left: 22%;
+            width: 30%;
+            height: 25%;
+            background: radial-gradient(ellipse, rgba(255, 255, 255, 0.7) 0%, transparent 100%);
+            filter: blur(1px);
+        }
+        .ball:hover:not(.ball-unavailable) {
+            transform: scale(1.15);
+            z-index: 5;
+            filter: brightness(1.2);
+        }
+        .ball:active:not(.ball-unavailable) {
+            transform: scale(0.9);
+            transition: 0.06s ease;
+        }
+        .ball-unavailable {
+            cursor: not-allowed;
+            opacity: 0.35;
+            filter: grayscale(40%) brightness(0.6);
+            pointer-events: none;
+        }
+        .ball-potted {
+            opacity: 0.15;
+            filter: grayscale(70%) brightness(0.4);
+            pointer-events: none;
+            cursor: default;
+        }
+        /* Red balls - smaller */
+        .ball-red {
+            width: 38px;
+            height: 38px;
+            background: radial-gradient(circle at 32% 30%, #f05a5a, #c02020 45%, #7a0000 75%, #3d0000 100%);
+            box-shadow: var(--ball-shadow), inset 0 -3px 6px rgba(0, 0, 0, 0.5);
+        }
+        /* Color balls - larger */
+        .ball-yellow {
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle at 32% 30%, #ffe98a, #e6b800 45%, #a07800 75%, #5c3d00 100%);
+            box-shadow: var(--ball-shadow), inset 0 -3px 8px rgba(0, 0, 0, 0.45);
+        }
+        .ball-green {
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle at 32% 30%, #5dbb5d, #1a7a1a 45%, #0a4a0a 75%, #042504 100%);
+            box-shadow: var(--ball-shadow), inset 0 -3px 8px rgba(0, 0, 0, 0.45);
+        }
+        .ball-brown {
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle at 32% 30%, #c8845c, #7a3b1e 45%, #4a1e0a 75%, #2a0e04 100%);
+            box-shadow: var(--ball-shadow), inset 0 -3px 8px rgba(0, 0, 0, 0.45);
+        }
+        .ball-blue {
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle at 32% 30%, #5c8cf0, #1a3faa 45%, #0a1f6a 75%, #040d35 100%);
+            box-shadow: var(--ball-shadow), inset 0 -3px 8px rgba(0, 0, 0, 0.45);
+        }
+        .ball-pink {
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle at 32% 30%, #f590b8, #c04070 45%, #7a1a40 75%, #3d0820 100%);
+            box-shadow: var(--ball-shadow), inset 0 -3px 8px rgba(0, 0, 0, 0.45);
+        }
+        .ball-black {
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle at 32% 30%, #5a5a5a, #1a1a1a 45%, #0a0a0a 75%, #000000 100%);
+            box-shadow: var(--ball-shadow), inset 0 -3px 8px rgba(0, 0, 0, 0.6);
+            border: 2px solid #333;
+        }
+
+        .ball-label {
+            position: absolute;
+            bottom: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            white-space: nowrap;
+            pointer-events: none;
+            letter-spacing: 0.03em;
+        }
+
+        /* Action row */
+        .actions-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .actions-row .btn {
+            font-size: 0.85rem;
+            padding: 10px 18px;
+        }
+
+        /* History panel */
+        .history-panel {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+        }
+        .history-panel .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            cursor: pointer;
+            user-select: none;
+        }
+        .history-panel .history-header h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+        }
+        .history-list {
+            max-height: 280px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+        .history-list::-webkit-scrollbar {
+            width: 5px;
+        }
+        .history-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .history-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .history-entry {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            font-size: 0.82rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            transition: background 0.15s;
+            flex-wrap: wrap;
+        }
+        .history-entry:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .history-entry .shot-num {
+            font-weight: 700;
+            color: var(--text-muted);
+            min-width: 28px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+        }
+        .history-entry .entry-player {
+            font-weight: 700;
+            min-width: 70px;
+            font-size: 0.8rem;
+        }
+        .history-entry .entry-action {
+            flex: 1;
+            min-width: 100px;
+            font-size: 0.78rem;
+        }
+        .history-entry .entry-pts {
+            font-weight: 700;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            min-width: 40px;
+            text-align: right;
+        }
+        .history-entry .entry-scores {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            min-width: 70px;
+            text-align: right;
+        }
+        .entry-player.p1 {
+            color: var(--player1-accent);
+        }
+        .entry-player.p2 {
+            color: var(--player2-accent);
+        }
+        .no-history {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 0.85rem;
+        }
+
+        /* Modal overlay */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        .modal {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 28px 24px;
+            width: 90%;
+            max-width: 440px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        .modal h2 {
+            margin-bottom: 16px;
+            text-align: center;
+            font-size: 1.3rem;
+            letter-spacing: -0.01em;
+        }
+        .modal input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 1rem;
+            margin-bottom: 10px;
+            font-family: var(--font-sans);
+            transition: border 0.2s;
+        }
+        .modal input:focus {
+            outline: none;
+            border-color: #e2b04a;
+            box-shadow: 0 0 0 3px rgba(226, 176, 74, 0.15);
+        }
+        .modal .btn-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+        .toast.show {
+            opacity: 1;
+        }
+
+        /* Saved frames list */
+        .saved-frames-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .saved-frame-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: var(--bg);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+            font-size: 0.85rem;
+        }
+        .saved-frame-item:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: var(--surface2);
+        }
+
+        @media (max-width: 600px) {
+            .score-panel .player-score {
+                font-size: 3rem;
+            }
+            .ball-red {
+                width: 30px;
+                height: 30px;
+            }
+            .ball-yellow,
+            .ball-green,
+            .ball-brown,
+            .ball-blue,
+            .ball-pink,
+            .ball-black {
+                width: 40px;
+                height: 40px;
+            }
+            .colors-row {
+                gap: 10px;
+            }
+            .reds-grid {
+                gap: 5px;
+            }
+            .score-panel {
+                padding: 14px 10px;
+            }
+            .app-header h1 {
+                font-size: 1.2rem;
+            }
+            .btn {
+                padding: 7px 12px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="app-header">
+            <h1>🎱 Snooker Scorer</h1>
+            <div class="header-actions">
+                <button class="btn btn-sm" id="btnNewFrame" title="Start a new frame">➕ New Frame</button>
+                <button class="btn btn-sm" id="btnSaveFrame" title="Save current frame">💾 Save</button>
+                <button class="btn btn-sm" id="btnLoadFrame" title="Load saved frame">📂 Load</button>
+                <button class="btn btn-sm" id="btnUndo" title="Undo last shot">↩ Undo</button>
+            </div>
+        </div>
+
+        <!-- Scoreboard -->
+        <div class="scoreboard">
+            <div class="score-panel player1 active-player" id="panelPlayer1">
+                <div class="player-name" id="namePlayer1">Player 1</div>
+                <div class="player-score" id="scorePlayer1">0</div>
+                <div class="player-break" id="breakPlayer1"></div>
+            </div>
+            <div class="score-divider">VS</div>
+            <div class="score-panel player2" id="panelPlayer2">
+                <div class="player-name" id="namePlayer2">Player 2</div>
+                <div class="player-score" id="scorePlayer2">0</div>
+                <div class="player-break" id="breakPlayer2"></div>
+            </div>
+        </div>
+
+        <!-- Game info -->
+        <div class="game-info-bar">
+            <div class="info-item">📋 Phase: <span class="info-value" id="infoPhase">Red</span></div>
+            <div class="info-item">🔴 Reds left: <span class="info-value" id="infoReds">15</span></div>
+            <div class="info-item">🎯 At table: <span class="info-value" id="infoAtTable">Player 1</span></div>
+            <div class="info-item">🔥 Break: <span class="info-value" id="infoBreak">0</span></div>
+        </div>
+
+        <!-- Balls -->
+        <div class="ball-section">
+            <h3>🔴 Red Balls (click to pot)</h3>
+            <div class="reds-grid" id="redsGrid"></div>
+            <h3>🟡🟢🟤🔵🟣⚫ Colors</h3>
+            <div class="colors-row" id="colorsRow"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions-row">
+            <button class="btn btn-danger" id="btnFoul">⚠ Foul (4pts)</button>
+            <button class="btn" id="btnMiss">✋ Miss / End Turn</button>
+            <button class="btn btn-accent" id="btnEndFrame">🏁 End Frame</button>
+        </div>
+
+        <!-- History -->
+        <div class="history-panel" id="historyPanel">
+            <div class="history-header" id="historyToggle">
+                <h3>📜 Shot History</h3>
+                <span style="font-size:0.7rem;color:var(--text-muted)" id="historyCount">0 shots</span>
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="no-history">No shots recorded yet. Start potting balls!</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Player setup modal -->
+    <div class="modal-overlay" id="modalSetup">
+        <div class="modal">
+            <h2>👥 Enter Player Names</h2>
+            <input type="text" id="inputP1" placeholder="Player 1 name" value="Player 1" maxlength="30">
+            <input type="text" id="inputP2" placeholder="Player 2 name" value="Player 2" maxlength="30">
+            <div class="btn-row">
+                <button class="btn btn-accent" id="btnStartGame">Start Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load frame modal -->
+    <div class="modal-overlay" id="modalLoad" style="display:none">
+        <div class="modal">
+            <h2>📂 Saved Frames</h2>
+            <div class="saved-frames-list" id="savedFramesList">
+                <div class="no-history">No saved frames found.</div>
+            </div>
+            <div class="btn-row" style="margin-top:14px">
+                <button class="btn" id="btnCloseLoad">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        (function() {
+            // ──────────────────────────────────────
+            // DATABASE LAYER (IndexedDB)
+            // Clean API – swap implementation here for server DB
+            // ──────────────────────────────────────
+            const DB_NAME = 'SnookerScorerDB';
+            const DB_VERSION = 1;
+            const STORE_FRAMES = 'frames';
+            const STORE_SHOTS = 'shots';
+
+            /** Open DB connection */
+            function openDB() {
+                return new Promise((resolve, reject) => {
+                    const req = indexedDB.open(DB_NAME, DB_VERSION);
+                    req.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains(STORE_FRAMES)) {
+                            const framesStore = db.createObjectStore(STORE_FRAMES, {
+                                keyPath: 'id',
+                                autoIncrement: true
+                            });
+                            framesStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+                        }
+                        if (!db.objectStoreNames.contains(STORE_SHOTS)) {
+                            const shotsStore = db.createObjectStore(STORE_SHOTS, {
+                                keyPath: 'id',
+                                autoIncrement: true
+                            });
+                            shotsStore.createIndex('frameId', 'frameId', { unique: false });
+                            shotsStore.createIndex('shotNumber', 'shotNumber', { unique: false });
+                        }
+                    };
+                    req.onsuccess = (e) => resolve(e.target.result);
+                    req.onerror = (e) => reject(e.target.error);
+                });
+            }
+
+            /** Generic DB operation */
+            function dbOp(storeName, mode, callback) {
+                return openDB().then(db => {
+                    return new Promise((resolve, reject) => {
+                        const tx = db.transaction(storeName, mode);
+                        const store = tx.objectStore(storeName);
+                        const result = callback(store, tx);
+                        tx.oncomplete = () => {
+                            db.close();
+                            resolve(result);
+                        };
+                        tx.onerror = (e) => {
+                            db.close();
+                            reject(e.target.error);
+                        };
+                        tx.onabort = (e) => {
+                            db.close();
+                            reject(e.target.error);
+                        };
+                    });
+                });
+            }
+
+            // Public DB API
+            const gameDB = {
+                /** Save a frame (insert or update) */
+                saveFrame(frameData) {
+                    return dbOp(STORE_FRAMES, 'readwrite', (store) => {
+                        const data = { ...frameData, updatedAt: Date.now() };
+                        if (data.id) {
+                            return store.put(data);
+                        } else {
+                            data.createdAt = Date.now();
+                            return store.add(data);
+                        }
+                    });
+                },
+
+                /** Load a single frame by ID */
+                loadFrame(id) {
+                    return dbOp(STORE_FRAMES, 'readonly', (store) => {
+                        return store.get(id);
+                    });
+                },
+
+                /** Get all saved frames (summary, sorted by last updated) */
+                getAllFrames() {
+                    return dbOp(STORE_FRAMES, 'readonly', (store) => {
+                        const frames = [];
+                        const index = store.index('updatedAt');
+                        return new Promise((resolve) => {
+                            const cursorReq = index.openCursor(null, 'prev');
+                            cursorReq.onsuccess = (e) => {
+                                const cursor = e.target.result;
+                                if (cursor) {
+                                    frames.push(cursor.value);
+                                    cursor.continue();
+                                } else {
+                                    resolve(frames);
+                                }
+                            };
+                        });
+                    });
+                },
+
+                /** Add a shot to a frame */
+                addShot(shotData) {
+                    return dbOp(STORE_SHOTS, 'readwrite', (store) => {
+                        return store.add({ ...shotData, timestamp: Date.now() });
+                    });
+                },
+
+                /** Get all shots for a frame, ordered by shot number */
+                getShots(frameId) {
+                    return dbOp(STORE_SHOTS, 'readonly', (store) => {
+                        const shots = [];
+                        const index = store.index('frameId');
+                        return new Promise((resolve) => {
+                            const cursorReq = index.openCursor(IDBKeyRange.only(frameId));
+                            cursorReq.onsuccess = (e) => {
+                                const cursor = e.target.result;
+                                if (cursor) {
+                                    shots.push(cursor.value);
+                                    cursor.continue();
+                                } else {
+                                    resolve(shots.sort((a, b) => a.shotNumber - b.shotNumber));
+                                }
+                            };
+                        });
+                    });
+                },
+
+                /** Delete a frame and its shots */
+                deleteFrame(frameId) {
+                    return dbOp(STORE_SHOTS, 'readwrite', (shotsStore) => {
+                        const index = shotsStore.index('frameId');
+                        const delShots = new Promise((resolve) => {
+                            const cursorReq = index.openCursor(IDBKeyRange.only(frameId));
+                            cursorReq.onsuccess = (e) => {
+                                const cursor = e.target.result;
+                                if (cursor) {
+                                    cursor.delete();
+                                    cursor.continue();
+                                } else {
+                                    resolve();
+                                }
+                            };
+                        });
+                        return delShots;
+                    }).then(() => {
+                        return dbOp(STORE_FRAMES, 'readwrite', (store) => {
+                            return store.delete(frameId);
+                        });
+                    });
+                },
+
+                /** Update frame data */
+                updateFrame(id, data) {
+                    return dbOp(STORE_FRAMES, 'readwrite', (store) => {
+                        return store.get(id).then(existing => {
+                            if (!existing) throw new Error('Frame not found');
+                            const updated = { ...existing, ...data, updatedAt: Date.now() };
+                            return store.put(updated);
+                        });
+                    });
+                }
+            };
+
+            // ──────────────────────────────────────
+            // GAME STATE
+            // ──────────────────────────────────────
+            const COLOR_ORDER = ['yellow', 'green', 'brown', 'blue', 'pink', 'black'];
+            const COLOR_POINTS = { yellow: 2, green: 3, brown: 4, blue: 5, pink: 6, black: 7 };
+            const COLOR_DISPLAY_NAMES = {
+                yellow: 'Yellow (2)',
+                green: 'Green (3)',
+                brown: 'Brown (4)',
+                blue: 'Blue (5)',
+                pink: 'Pink (6)',
+                black: 'Black (7)'
+            };
+
+            let gameState = {
+                frameId: null, // DB id once saved
+                player1Name: 'Player 1',
+                player2Name: 'Player 2',
+                scores: [0, 0], // [p1, p2]
+                currentPlayer: 0, // 0 or 1
+                currentBreak: 0,
+                redsRemaining: 15,
+                phase: 'red', // 'red' | 'color' | 'sequence' | 'finished'
+                sequenceIndex: 0, // index in COLOR_ORDER (0=yellow...5=black)
+                shotCount: 0,
+                history: [], // in-memory for current session
+                colorPottedThisPhase: false, // track if color was potted after last red before sequence
+            };
+
+            function resetGameState(p1Name, p2Name) {
+                gameState = {
+                    frameId: null,
+                    player1Name: p1Name || 'Player 1',
+                    player2Name: p2Name || 'Player 2',
+                    scores: [0, 0],
+                    currentPlayer: 0,
+                    currentBreak: 0,
+                    redsRemaining: 15,
+                    phase: 'red',
+                    sequenceIndex: 0,
+                    shotCount: 0,
+                    history: [],
+                    colorPottedThisPhase: false,
+                };
+                updateUI();
+                renderBalls();
+                renderHistory();
+                updateGameInfoBar();
+            }
+
+            // ──────────────────────────────────────
+            // UI HELPERS
+            // ──────────────────────────────────────
+            function $(sel) { return document.querySelector(sel); }
+
+            function $$(sel) { return document.querySelectorAll(sel); }
+
+            function showToast(msg, duration = 1800) {
+                const toast = $('#toast');
+                toast.textContent = msg;
+                toast.classList.add('show');
+                clearTimeout(toast._timeout);
+                toast._timeout = setTimeout(() => toast.classList.remove('show'), duration);
+            }
+
+            function updateUI() {
+                const s = gameState;
+                $('#scorePlayer1').textContent = s.scores[0];
+                $('#scorePlayer2').textContent = s.scores[1];
+                $('#namePlayer1').textContent = s.player1Name;
+                $('#namePlayer2').textContent = s.player2Name;
+
+                // Active player highlight
+                const p1 = $('#panelPlayer1');
+                const p2 = $('#panelPlayer2');
+                p1.classList.toggle('active-player', s.currentPlayer === 0 && s.phase !== 'finished');
+                p2.classList.toggle('active-player', s.currentPlayer === 1 && s.phase !== 'finished');
+
+                // Break display
+                const bp1 = $('#breakPlayer1');
+                const bp2 = $('#breakPlayer2');
+                if (s.currentPlayer === 0 && s.currentBreak > 0 && s.phase !== 'finished') {
+                    bp1.textContent = `🔥 Break: ${s.currentBreak}`;
+                    bp2.textContent = '';
+                } else if (s.currentPlayer === 1 && s.currentBreak > 0 && s.phase !== 'finished') {
+                    bp2.textContent = `🔥 Break: ${s.currentBreak}`;
+                    bp1.textContent = '';
+                } else {
+                    bp1.textContent = '';
+                    bp2.textContent = '';
+                }
+
+                $('#historyCount').textContent = `${s.shotCount} shots`;
+                updateGameInfoBar();
+            }
+
+            function updateGameInfoBar() {
+                const s = gameState;
+                const phaseNames = {
+                    'red': '🔴 Pot a Red',
+                    'color': '🎨 Pot a Color',
+                    'sequence': '🌈 Colors in Order',
+                    'finished': '✅ Frame Finished'
+                };
+                $('#infoPhase').textContent = phaseNames[s.phase] || s.phase;
+                $('#infoReds').textContent = s.redsRemaining;
+                const atTable = s.currentPlayer === 0 ? s.player1Name : s.player2Name;
+                $('#infoAtTable').textContent = s.phase === 'finished' ? '—' : atTable;
+                $('#infoBreak').textContent = s.currentBreak;
+            }
+
+            function renderBalls() {
+                const s = gameState;
+                // Reds
+                const redsGrid = $('#redsGrid');
+                redsGrid.innerHTML = '';
+                for (let i = 0; i < 15; i++) {
+                    const ball = document.createElement('div');
+                    ball.className = 'ball ball-red';
+                    if (i >= s.redsRemaining) {
+                        ball.classList.add('ball-potted');
+                    } else if (s.phase !== 'red') {
+                        ball.classList.add('ball-unavailable');
+                    } else {
+                        ball.addEventListener('click', () => potBall('red'));
+                        ball.title = 'Pot Red (1 pt)';
+                    }
+                    if (i >= s.redsRemaining) {
+                        ball.title = 'Already potted';
+                    }
+                    redsGrid.appendChild(ball);
+                }
+
+                // Colors
+                const colorsRow = $('#colorsRow');
+                colorsRow.innerHTML = '';
+                COLOR_ORDER.forEach((color, idx) => {
+                    const ball = document.createElement('div');
+                    ball.className = `ball ball-${color}`;
+                    ball.style.position = 'relative';
+
+                    // Check availability
+                    let available = false;
+                    if (s.phase === 'color' || (s.phase === 'red' && s.redsRemaining === 0 && !s
+                            .colorPottedThisPhase && s.sequenceIndex === 0)) {
+                        // During 'color' phase, all colors available
+                        // Edge: after last red potted, entering color phase
+                        available = true;
+                    } else if (s.phase === 'sequence') {
+                        // Only the next color in sequence
+                        available = (idx === s.sequenceIndex);
+                    } else if (s.phase === 'red' && s.redsRemaining === 0 && s.sequenceIndex === 0 && !s
+                        .colorPottedThisPhase) {
+                        available = true;
+                    }
+
+                    // Also handle the case where we just potted last red and are in 'color' phase
+                    if (s.phase === 'color') {
+                        available = true;
+                    }
+
+                    if (s.phase === 'finished') {
+                        available = false;
+                    }
+
+                    // Check if this color was already potted in sequence phase
+                    if (s.phase === 'sequence' && idx < s.sequenceIndex) {
+                        ball.classList.add('ball-potted');
+                        available = false;
+                    }
+
+                    if (!available && !ball.classList.contains('ball-potted')) {
+                        ball.classList.add('ball-unavailable');
+                    }
+
+                    if (available) {
+                        ball.addEventListener('click', () => potBall(color));
+                        ball.title = `Pot ${COLOR_DISPLAY_NAMES[color]} (${COLOR_POINTS[color]} pts)`;
+                    } else if (ball.classList.contains('ball-potted')) {
+                        ball.title = 'Already potted';
+                    } else {
+                        ball.title = 'Not available now';
+                    }
+
+                    // Label
+                    const label = document.createElement('span');
+                    label.className = 'ball-label';
+                    label.textContent = COLOR_POINTS[color];
+                    ball.appendChild(label);
+
+                    colorsRow.appendChild(ball);
+                });
+            }
+
+            function renderHistory() {
+                const list = $('#historyList');
+                const s = gameState;
+                if (s.history.length === 0) {
+                    list.innerHTML = '<div class="no-history">No shots recorded yet. Start potting balls!</div>';
+                    return;
+                }
+                list.innerHTML = '';
+                // Show newest first
+                const reversed = [...s.history].reverse();
+                reversed.forEach(entry => {
+                    const div = document.createElement('div');
+                    div.className = 'history-entry';
+                    const pClass = entry.playerIndex === 0 ? 'p1' : 'p2';
+                    const pName = entry.playerIndex === 0 ? s.player1Name : s.player2Name;
+                    div.innerHTML = `
+                <span class="shot-num">#${entry.shotNumber}</span>
+                <span class="entry-player ${pClass}">${pName}</span>
+                <span class="entry-action">${entry.actionLabel}</span>
+                <span class="entry-pts">${entry.points > 0 ? '+' + entry.points : '0'}</span>
+                <span class="entry-scores">${entry.scoresAfter[0]} – ${entry.scoresAfter[1]}</span>
+              `;
+                    list.appendChild(div);
+                });
+                // Scroll to top to show newest
+                list.scrollTop = 0;
+                $('#historyCount').textContent = `${s.shotCount} shots`;
+            }
+
+            // ──────────────────────────────────────
+            // GAME LOGIC
+            // ──────────────────────────────────────
+            function potBall(ballType) {
+                const s = gameState;
+                if (s.phase === 'finished') return;
+
+                let points = 0;
+                let actionLabel = '';
+
+                if (ballType === 'red') {
+                    if (s.phase !== 'red') {
+                        showToast('Cannot pot a red now!');
+                        return;
+                    }
+                    points = 1;
+                    actionLabel = 'Potted Red';
+                    s.redsRemaining--;
+                    s.scores[s.currentPlayer] += points;
+                    s.currentBreak += points;
+                    s.shotCount++;
+                    s.history.push(makeHistoryEntry('red', points, actionLabel));
+
+                    if (s.redsRemaining === 0) {
+                        // Last red potted, must pot a color next
+                        s.phase = 'color';
+                        s.colorPottedThisPhase = false;
+                    } else {
+                        s.phase = 'color';
+                    }
+                } else if (COLOR_ORDER.includes(ballType)) {
+                    const colorPoints = COLOR_POINTS[ballType];
+                    if (s.phase === 'color') {
+                        points = colorPoints;
+                        actionLabel = `Potted ${ballType.charAt(0).toUpperCase() + ballType.slice(1)} (${points}pts)`;
+                        s.scores[s.currentPlayer] += points;
+                        s.currentBreak += points;
+                        s.shotCount++;
+                        s.history.push(makeHistoryEntry(ballType, points, actionLabel));
+
+                        if (s.redsRemaining === 0) {
+                            // All reds were already potted; after this color, go to sequence
+                            s.phase = 'sequence';
+                            s.sequenceIndex = 0;
+                            s.colorPottedThisPhase = true;
+                        } else {
+                            s.phase = 'red';
+                        }
+                    } else if (s.phase === 'sequence') {
+                        const expectedColor = COLOR_ORDER[s.sequenceIndex];
+                        if (ballType !== expectedColor) {
+                            showToast(`Must pot ${COLOR_DISPLAY_NAMES[expectedColor]} next!`);
+                            return;
+                        }
+                        points = colorPoints;
+                        actionLabel =
+                            `Potted ${ballType.charAt(0).toUpperCase() + ballType.slice(1)} (${points}pts) [Sequence]`;
+                        s.scores[s.currentPlayer] += points;
+                        s.currentBreak += points;
+                        s.shotCount++;
+                        s.history.push(makeHistoryEntry(ballType, points, actionLabel));
+                        s.sequenceIndex++;
+                        if (s.sequenceIndex >= COLOR_ORDER.length) {
+                            s.phase = 'finished';
+                            showToast('🎉 Frame complete! All balls potted.', 3000);
+                        }
+                    } else {
+                        showToast('Cannot pot a color now!');
+                        return;
+                    }
+                }
+
+                updateUI();
+                renderBalls();
+                renderHistory();
+                if (s.phase === 'finished') {
+                    announceWinner();
+                }
+            }
+
+            function makeHistoryEntry(ballType, points, actionLabel) {
+                const s = gameState;
+                return {
+                    shotNumber: s.shotCount,
+                    playerIndex: s.currentPlayer,
+                    ballType: ballType,
+                    points: points,
+                    actionLabel: actionLabel,
+                    scoresAfter: [...s.scores],
+                    phaseAfter: s.phase,
+                    timestamp: Date.now(),
+                };
+            }
+
+            function missTurn() {
+                const s = gameState;
+                if (s.phase === 'finished') return;
+                const playerName = s.currentPlayer === 0 ? s.player1Name : s.player2Name;
+                s.shotCount++;
+                s.history.push({
+                    shotNumber: s.shotCount,
+                    playerIndex: s.currentPlayer,
+                    ballType: 'miss',
+                    points: 0,
+                    actionLabel: 'Missed / End Turn',
+                    scoresAfter: [...s.scores],
+                    phaseAfter: s.phase,
+                    timestamp: Date.now(),
+                });
+                s.currentBreak = 0;
+                s.currentPlayer = s.currentPlayer === 0 ? 1 : 0;
+                // Reset to appropriate phase for new player
+                if (s.redsRemaining > 0) {
+                    s.phase = 'red';
+                } else if (s.phase === 'sequence') {
+                    // Stay in sequence
+                } else {
+                    s.phase = 'sequence';
+                    s.sequenceIndex = s.sequenceIndex || 0;
+                }
+                s.colorPottedThisPhase = false;
+                updateUI();
+                renderBalls();
+                renderHistory();
+                showToast(`⏭ Turn passes to ${s.currentPlayer === 0 ? s.player1Name : s.player2Name}`);
+            }
+
+            function commitFoul(penaltyPoints = 4) {
+                const s = gameState;
+                if (s.phase === 'finished') return;
+                const foulingPlayer = s.currentPlayer;
+                const opponentIdx = foulingPlayer === 0 ? 1 : 0;
+                const foulingName = foulingPlayer === 0 ? s.player1Name : s.player2Name;
+                const opponentName = opponentIdx === 0 ? s.player1Name : s.player2Name;
+
+                s.scores[opponentIdx] += penaltyPoints;
+                s.shotCount++;
+                s.history.push({
+                    shotNumber: s.shotCount,
+                    playerIndex: foulingPlayer,
+                    ballType: 'foul',
+                    points: penaltyPoints,
+                    actionLabel: `Foul (${penaltyPoints}pts to opponent)`,
+                    scoresAfter: [...s.scores],
+                    phaseAfter: s.phase,
+                    timestamp: Date.now(),
+                });
+                s.currentBreak = 0;
+                s.currentPlayer = opponentIdx;
+                if (s.redsRemaining > 0) {
+                    s.phase = 'red';
+                } else if (s.phase === 'sequence') {
+                    // Stay in sequence
+                } else {
+                    s.phase = 'sequence';
+                    s.sequenceIndex = s.sequenceIndex || 0;
+                }
+                s.colorPottedThisPhase = false;
+                updateUI();
+                renderBalls();
+                renderHistory();
+                showToast(`⚠ Foul by ${foulingName}! +${penaltyPoints} to ${opponentName}`);
+            }
+
+            function undoLastShot() {
+                const s = gameState;
+                if (s.history.length === 0) {
+                    showToast('Nothing to undo.');
+                    return;
+                }
+                const last = s.history.pop();
+                s.shotCount = s.history.length;
+
+                // Restore scores
+                if (last.ballType === 'foul') {
+                    // Points were added to opponent
+                    const opponentIdx = last.playerIndex === 0 ? 1 : 0;
+                    s.scores[opponentIdx] -= last.points;
+                    s.currentPlayer = last.playerIndex;
+                } else if (last.ballType === 'miss') {
+                    s.currentPlayer = last.playerIndex;
+                } else {
+                    // Successful pot
+                    s.scores[last.playerIndex] -= last.points;
+                    s.currentPlayer = last.playerIndex;
+                    if (last.ballType === 'red') {
+                        s.redsRemaining++;
+                    }
+                }
+
+                // Recalculate phase from remaining history
+                s.currentBreak = 0;
+                s.phase = 'red';
+                s.sequenceIndex = 0;
+                s.colorPottedThisPhase = false;
+                s.currentPlayer = last.playerIndex;
+
+                // Replay history to rebuild state
+                const savedHistory = [...s.history];
+                s.scores = [0, 0];
+                s.redsRemaining = 15;
+                s.phase = 'red';
+                s.sequenceIndex = 0;
+                s.currentBreak = 0;
+                s.shotCount = 0;
+                s.history = [];
+                s.currentPlayer = last.playerIndex; // preserve
+                s.colorPottedThisPhase = false;
+
+                // Actually, simpler: just recalculate from scratch
+                s.scores = [0, 0];
+                s.redsRemaining = 15;
+                s.phase = 'red';
+                s.sequenceIndex = 0;
+                s.currentBreak = 0;
+                s.shotCount = 0;
+                s.currentPlayer = savedHistory.length > 0 ? savedHistory[0].playerIndex : 0;
+                s.colorPottedThisPhase = false;
+                const replayHistory = [...savedHistory];
+                s.history = [];
+
+                for (const entry of replayHistory) {
+                    if (entry.ballType === 'miss') {
+                        s.shotCount++;
+                        s.history.push({ ...entry, shotNumber: s.shotCount, scoresAfter: [...s.scores] });
+                        s.currentBreak = 0;
+                        s.currentPlayer = s.currentPlayer === 0 ? 1 : 0;
+                        if (s.redsRemaining > 0) s.phase = 'red';
+                        else { s.phase = 'sequence';
+                            s.sequenceIndex = s.sequenceIndex || 0; }
+                        s.colorPottedThisPhase = false;
+                    } else if (entry.ballType === 'foul') {
+                        const opp = s.currentPlayer === 0 ? 1 : 0;
+                        s.scores[opp] += entry.points;
+                        s.shotCount++;
+                        s.history.push({ ...entry, shotNumber: s.shotCount, scoresAfter: [...s.scores] });
+                        s.currentBreak = 0;
+                        s.currentPlayer = opp;
+                        if (s.redsRemaining > 0) s.phase = 'red';
+                        else { s.phase = 'sequence';
+                            s.sequenceIndex = s.sequenceIndex || 0; }
+                        s.colorPottedThisPhase = false;
+                    } else if (entry.ballType === 'red') {
+                        s.redsRemaining--;
+                        s.scores[s.currentPlayer] += 1;
+                        s.currentBreak += 1;
+                        s.shotCount++;
+                        s.history.push({ ...entry, shotNumber: s.shotCount, scoresAfter: [...s.scores] });
+                        s.phase = 'color';
+                    } else if (COLOR_ORDER.includes(entry.ballType)) {
+                        const pts = COLOR_POINTS[entry.ballType];
+                        s.scores[s.currentPlayer] += pts;
+                        s.currentBreak += pts;
+                        s.shotCount++;
+                        s.history.push({ ...entry, shotNumber: s.shotCount, scoresAfter: [...s.scores] });
+                        if (s.redsRemaining === 0 && s.phase === 'color') {
+                            s.phase = 'sequence';
+                            s.sequenceIndex = 0;
+                            s.colorPottedThisPhase = true;
+                        } else if (s.phase === 'sequence') {
+                            s.sequenceIndex = COLOR_ORDER.indexOf(entry.ballType) + 1;
+                            if (s.sequenceIndex >= COLOR_ORDER.length) s.phase = 'finished';
+                        } else {
+                            s.phase = 'red';
+                        }
+                    }
+                }
+                // Restore current break from consecutive pots by current player
+                s.currentBreak = 0;
+                for (let i = s.history.length - 1; i >= 0; i--) {
+                    const h = s.history[i];
+                    if (h.playerIndex === s.currentPlayer && h.ballType !== 'miss' && h.ballType !== 'foul') {
+                        s.currentBreak += h.points;
+                    } else {
+                        break;
+                    }
+                }
+
+                updateUI();
+                renderBalls();
+                renderHistory();
+                showToast('↩ Last shot undone.');
+            }
+
+            function announceWinner() {
+                const s = gameState;
+                const diff = s.scores[0] - s.scores[1];
+                let msg = '';
+                if (diff > 0) msg = `🏆 ${s.player1Name} wins by ${diff} points!`;
+                else if (diff < 0) msg = `🏆 ${s.player2Name} wins by ${Math.abs(diff)} points!`;
+                else msg = `🤝 It's a tie!`;
+                showToast(msg, 3500);
+            }
+
+            function endFrame() {
+                const s = gameState;
+                if (s.phase === 'finished') {
+                    showToast('Frame is already finished.');
+                    return;
+                }
+                s.phase = 'finished';
+                s.currentBreak = 0;
+                updateUI();
+                renderBalls();
+                renderHistory();
+                announceWinner();
+                showToast('🏁 Frame ended manually.', 2500);
+            }
+
+            // ──────────────────────────────────────
+            // PERSISTENCE
+            // ──────────────────────────────────────
+            async function saveCurrentFrame() {
+                const s = gameState;
+                const frameData = {
+                    id: s.frameId || undefined,
+                    player1Name: s.player1Name,
+                    player2Name: s.player2Name,
+                    scores: [...s.scores],
+                    currentPlayer: s.currentPlayer,
+                    currentBreak: s.currentBreak,
+                    redsRemaining: s.redsRemaining,
+                    phase: s.phase,
+                    sequenceIndex: s.sequenceIndex,
+                    shotCount: s.shotCount,
+                    colorPottedThisPhase: s.colorPottedThisPhase,
+                };
+                try {
+                    const result = await gameDB.saveFrame(frameData);
+                    const frameId = typeof result === 'number' ? result : (s.frameId || result);
+                    s.frameId = frameId;
+
+                    // Save shots
+                    // First delete existing shots for this frame, then re-add
+                    // For simplicity, we save only new shots (those not yet persisted)
+                    // Actually, we'll save all in-memory history. We need to avoid duplicates.
+                    // Simple approach: delete all shots for frame, re-add all
+                    await deleteShotsForFrame(frameId);
+                    for (const shot of s.history) {
+                        await gameDB.addShot({
+                            frameId: frameId,
+                            shotNumber: shot.shotNumber,
+                            playerIndex: shot.playerIndex,
+                            ballType: shot.ballType,
+                            points: shot.points,
+                            actionLabel: shot.actionLabel,
+                            scoresAfter: shot.scoresAfter,
+                            phaseAfter: shot.phaseAfter,
+                        });
+                    }
+                    showToast('💾 Frame saved successfully!');
+                } catch (err) {
+                    console.error('Save failed:', err);
+                    showToast('❌ Failed to save frame.');
+                }
+            }
+
+            async function deleteShotsForFrame(frameId) {
+                return dbOp(STORE_SHOTS, 'readwrite', (store) => {
+                    const index = store.index('frameId');
+                    return new Promise((resolve) => {
+                        const cursorReq = index.openCursor(IDBKeyRange.only(frameId));
+                        cursorReq.onsuccess = (e) => {
+                            const cursor = e.target.result;
+                            if (cursor) {
+                                cursor.delete();
+                                cursor.continue();
+                            } else {
+                                resolve();
+                            }
+                        };
+                    });
+                });
+            }
+
+            async function loadFrameFromDB(frameId) {
+                try {
+                    const frameData = await gameDB.loadFrame(frameId);
+                    if (!frameData) {
+                        showToast('Frame not found.');
+                        return;
+                    }
+                    const shots = await gameDB.getShots(frameId);
+                    // Restore state
+                    gameState.frameId = frameData.id;
+                    gameState.player1Name = frameData.player1Name;
+                    gameState.player2Name = frameData.player2Name;
+                    gameState.scores = [...frameData.scores];
+                    gameState.currentPlayer = frameData.currentPlayer;
+                    gameState.currentBreak = frameData.currentBreak;
+                    gameState.redsRemaining = frameData.redsRemaining;
+                    gameState.phase = frameData.phase;
+                    gameState.sequenceIndex = frameData.sequenceIndex;
+                    gameState.shotCount = frameData.shotCount;
+                    gameState.colorPottedThisPhase = frameData.colorPottedThisPhase || false;
+                    gameState.history = shots.map(s => ({
+                        shotNumber: s.shotNumber,
+                        playerIndex: s.playerIndex,
+                        ballType: s.ballType,
+                        points: s.points,
+                        actionLabel: s.actionLabel,
+                        scoresAfter: s.scoresAfter,
+                        phaseAfter: s.phaseAfter,
+                        timestamp: s.timestamp,
+                    }));
+                    updateUI();
+                    renderBalls();
+                    renderHistory();
+                    updateGameInfoBar();
+                    closeLoadModal();
+                    showToast('📂 Frame loaded!');
+                } catch (err) {
+                    console.error('Load failed:', err);
+                    showToast('❌ Failed to load frame.');
+                }
+            }
+
+            async function showLoadModal() {
+                const modal = $('#modalLoad');
+                const list = $('#savedFramesList');
+                modal.style.display = 'flex';
+                list.innerHTML = '<div class="no-history">Loading...</div>';
+                try {
+                    const frames = await gameDB.getAllFrames();
+                    if (frames.length === 0) {
+                        list.innerHTML = '<div class="no-history">No saved frames found.</div>';
+                    } else {
+                        list.innerHTML = '';
+                        frames.forEach(f => {
+                            const div = document.createElement('div');
+                            div.className = 'saved-frame-item';
+                            const dateStr = f.updatedAt ? new Date(f.updatedAt).toLocaleString() :
+                                'Unknown date';
+                            div.innerHTML = `
+                    <div>
+                      <strong>${f.player1Name}</strong> vs <strong>${f.player2Name}</strong>
+                      <br><small style="color:var(--text-muted)">${f.scores?.[0]||0}–${f.scores?.[1]||0} | ${f.phase||'unknown'} | ${dateStr}</small>
+                    </div>
+                    <button class="btn btn-xs btn-danger" data-delete="${f.id}" title="Delete frame">🗑</button>
+                  `;
+                            div.addEventListener('click', (e) => {
+                                if (e.target.closest('[data-delete]')) {
+                                    e.stopPropagation();
+                                    const fid = parseInt(e.target.closest('[data-delete]')
+                                        .getAttribute('data-delete'));
+                                    deleteFrameAndRefresh(fid);
+                                    return;
+                                }
+                                loadFrameFromDB(f.id);
+                            });
+                            list.appendChild(div);
+                        });
+                    }
+                } catch (err) {
+                    list.innerHTML = '<div class="no-history">Error loading frames.</div>';
+                }
+            }
+
+            async function deleteFrameAndRefresh(frameId) {
+                if (!confirm('Delete this saved frame?')) return;
+                try {
+                    await gameDB.deleteFrame(frameId);
+                    showToast('🗑 Frame deleted.');
+                    showLoadModal(); // refresh
+                } catch (err) {
+                    showToast('❌ Failed to delete.');
+                }
+            }
+
+            function closeLoadModal() {
+                $('#modalLoad').style.display = 'none';
+            }
+
+            function startNewFrame() {
+                if (gameState.history.length > 0 && gameState.phase !== 'finished') {
+                    if (!confirm('Start a new frame? Current unsaved progress will be lost.')) return;
+                }
+                const p1 = $('#inputP1').value.trim() || 'Player 1';
+                const p2 = $('#inputP2').value.trim() || 'Player 2';
+                resetGameState(p1, p2);
+                $('#modalSetup').style.display = 'none';
+                showToast('🆕 New frame started!');
+            }
+
+            // ──────────────────────────────────────
+            // EVENT BINDINGS
+            // ──────────────────────────────────────
+            $('#btnFoul').addEventListener('click', () => commitFoul(4));
+            $('#btnMiss').addEventListener('click', missTurn);
+            $('#btnEndFrame').addEventListener('click', endFrame);
+            $('#btnUndo').addEventListener('click', undoLastShot);
+            $('#btnNewFrame').addEventListener('click', () => {
+                $('#inputP1').value = gameState.player1Name;
+                $('#inputP2').value = gameState.player2Name;
+                $('#modalSetup').style.display = 'flex';
+            });
+            $('#btnSaveFrame').addEventListener('click', saveCurrentFrame);
+            $('#btnLoadFrame').addEventListener('click', showLoadModal);
+            $('#btnCloseLoad').addEventListener('click', closeLoadModal);
+            $('#btnStartGame').addEventListener('click', startNewFrame);
+            $('#modalLoad').addEventListener('click', (e) => {
+                if (e.target === $('#modalLoad')) closeLoadModal();
+            });
+            $('#modalSetup').addEventListener('click', (e) => {
+                if (e.target === $('#modalSetup')) {
+                    if (gameState.shotCount > 0 || gameState.frameId) {
+                        $('#modalSetup').style.display = 'none';
+                    }
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT') return; // don't capture while typing
+                switch (e.key.toLowerCase()) {
+                    case 'f':
+                        commitFoul(4);
+                        break;
+                    case 'm':
+                        missTurn();
+                        break;
+                    case 'u':
+                        if (e.ctrlKey || e.metaKey) {
+                            e.preventDefault();
+                            undoLastShot();
+                        }
+                        break;
+                    case 'z':
+                        if (e.ctrlKey || e.metaKey) {
+                            e.preventDefault();
+                            undoLastShot();
+                        }
+                        break;
+                    case 's':
+                        if (e.ctrlKey || e.metaKey) {
+                            e.preventDefault();
+                            saveCurrentFrame();
+                        }
+                        break;
+                }
+            });
+
+            // ──────────────────────────────────────
+            // INITIALIZATION
+            // ──────────────────────────────────────
+            async function init() {
+                try {
+                    await openDB(); // ensure DB is ready
+                } catch (err) {
+                    console.warn('IndexedDB init warning:', err);
+                }
+                // Show setup modal
+                $('#modalSetup').style.display = 'flex';
+                $('#inputP1').value = 'Player 1';
+                $('#inputP2').value = 'Player 2';
+                $('#inputP1').focus();
+                updateUI();
+                renderBalls();
+                renderHistory();
+                updateGameInfoBar();
+            }
+
+            init();
+        })();
+    </script>
+</body>
+</html>
