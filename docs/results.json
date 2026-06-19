@@ -90,20 +90,32 @@
 		"score": "F",
 		"notes": "truncated output"
 	},
-	
 	{
 		"name": "Qwen 3.7max",
 		"file": "Qwen3.7max.html",
 		"sizeClass": "XL",
 		"score": "A",
 		"notes": ""
-	}
-	,
+	},
 	{
 		"name": "Mistral3.5 medium",
 		"file": "mistral3.5.medium.html",
 		"sizeClass": "L",
 		"score": "B",
+		"notes": "Buggy"
+	},
+	{
+		"name": "Gemini 3.5 flash medium",
+		"file": "gemini3.5.flash.medium/",
+		"sizeClass": "XXL",
+		"score": "A",
+		"notes": ""
+	},
+	{
+		"name": "Grok 4.3 Fast",
+		"file": "grok4.3.Fast.html",
+		"sizeClass": "XL",
+		"score": "C",
 		"notes": "Buggy"
 	}
 ]

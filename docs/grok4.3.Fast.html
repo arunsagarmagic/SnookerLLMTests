@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snooker Scorekeeper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Roboto+Mono:wght@400;700&amp;display=swap');
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .ball {
+            width: 60px;
+            height: 60px;s
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3), 
+                        inset 0 -8px 12px -4px rgb(255 255 255 / 0.4),
+                        inset 0 8px 12px -4px rgb(0 0 0 / 0.3);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        
+        .ball:hover {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.3), 
+                        inset 0 -8px 12px -4px rgb(255 255 255 / 0.6);
+        }
+        
+        .ball.red { background: radial-gradient(circle at 40% 30%, #fff, #ef4444 40%, #b91c1c); }
+        .ball.yellow { background: radial-gradient(circle at 40% 30%, #fff, #eab308 40%, #ca8a04); color: #1f2937; }
+        .ball.green { background: radial-gradient(circle at 40% 30%, #fff, #22c55e 40%, #15803d); }
+        .ball.brown { background: radial-gradient(circle at 40% 30%, #fff, #92400e 40%, #78350f); }
+        .ball.blue { background: radial-gradient(circle at 40% 30%, #fff, #3b82f6 40%, #1e40af); }
+        .ball.pink { background: radial-gradient(circle at 40% 30%, #fff, #ec4899 40%, #be185d); }
+        .ball.black { background: radial-gradient(circle at 40% 30%, #fff, #1f2937 40%, #111827); }
+        
+        .score-display {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 3.5rem;
+            line-height: 1;
+        }
+        
+        .history-entry {
+            transition: all 0.2s ease;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-white min-h-screen">
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-2xl">🎱</div>
+                <h1 class="text-4xl font-bold tracking-tight">Snooker Scorekeeper</h1>
+            </div>
+            <div id="match-info" class="text-sm text-zinc-400 hidden"></div>
+        </div>
+
+        <!-- Setup Screen -->
+        <div id="setup-screen" class="max-w-md mx-auto">
+            <div class="bg-zinc-900 rounded-3xl p-10 shadow-2xl">
+                <h2 class="text-3xl font-semibold mb-8 text-center">New Frame</h2>
+                
+                <div class="space-y-8">
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Player 1</label>
+                        <input id="player1-name" type="text" 
+                               class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-6 py-4 text-xl focus:outline-none focus:border-green-500 transition-colors"
+                               placeholder="Player 1" value="Player 1">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-400 mb-2">Player 2</label>
+                        <input id="player2-name" type="text" 
+                               class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-6 py-4 text-xl focus:outline-none focus:border-green-500 transition-colors"
+                               placeholder="Player 2" value="Player 2">
+                    </div>
+                    
+                    <button onclick="startGame()" 
+                            class="w-full bg-green-600 hover:bg-green-500 transition-colors text-white font-semibold py-5 rounded-2xl text-xl flex items-center justify-center gap-3">
+                        <i class="fas fa-play"></i>
+                        START FRAME
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Scores -->
+                <div class="lg:col-span-5">
+                    <div class="bg-zinc-900 rounded-3xl p-8 shadow-2xl">
+                        <div class="flex justify-between items-start mb-8">
+                            <div id="player1-score-area" onclick="switchPlayer(0)" class="cursor-pointer flex-1 text-center">
+                                <div id="player1-name-display" class="font-mono text-lg text-emerald-400 mb-1"></div>
+                                <div id="player1-score" class="score-display text-emerald-400">0</div>
+                            </div>
+                            
+                            <div class="text-center px-8 pt-6">
+                                <div class="text-5xl font-light text-zinc-500">VS</div>
+                                <div id="frame-number" class="text-xs text-zinc-500 mt-2">FRAME 1</div>
+                            </div>
+                            
+                            <div id="player2-score-area" onclick="switchPlayer(1)" class="cursor-pointer flex-1 text-center">
+                                <div id="player2-name-display" class="font-mono text-lg text-amber-400 mb-1"></div>
+                                <div id="player2-score" class="score-display text-amber-400">0</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Current Break -->
+                        <div class="bg-zinc-800 rounded-2xl p-5 mb-6">
+                            <div class="flex justify-between items-center text-sm">
+                                <div class="text-zinc-400">CURRENT BREAK</div>
+                                <div id="current-player" class="font-mono text-emerald-400">PLAYER 1</div>
+                            </div>
+                            <div id="current-break" class="score-display text-4xl text-white mt-1">0</div>
+                        </div>
+                        
+                        <!-- Game Controls -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <button onclick="foul(4)" 
+                                    class="bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 py-4 rounded-2xl flex items-center justify-center gap-2 transition-colors">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                FOUL +4
+                            </button>
+                            <button onclick="endBreak()" 
+                                    class="bg-zinc-700 hover:bg-zinc-600 py-4 rounded-2xl flex items-center justify-center gap-2 transition-colors">
+                                END BREAK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Balls -->
+                <div class="lg:col-span-7">
+                    <div class="bg-zinc-900 rounded-3xl p-8 shadow-2xl">
+                        <div class="flex justify-between mb-6">
+                            <div>
+                                <h3 class="text-xl font-semibold">Balls on Table</h3>
+                                <div id="balls-remaining" class="text-zinc-400 text-sm">15 reds • 6 colours</div>
+                            </div>
+                            <button onclick="undoLastAction()" 
+                                    class="text-zinc-400 hover:text-white flex items-center gap-2 text-sm">
+                                <i class="fas fa-undo"></i> UNDO
+                            </button>
+                        </div>
+                        
+                        <!-- Reds -->
+                        <div class="mb-8">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="ball red text-xs">1</div>
+                                <div class="flex-1">
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-red-400">Reds</span>
+                                        <span id="reds-count" class="font-mono">15</span>
+                                    </div>
+                                    <div class="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                                        <div id="reds-progress" class="h-full bg-red-500 rounded-full w-[100%]"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Colours -->
+                        <div class="grid grid-cols-3 md:grid-cols-6 gap-6" id="colours-grid">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Shot History -->
+            <div class="mt-8 bg-zinc-900 rounded-3xl p-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-semibold">Frame History</h3>
+                    <button onclick="clearHistory()" 
+                            class="text-xs px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-zinc-400">CLEAR</button>
+                </div>
+                <div id="history-list" class="space-y-2 max-h-96 overflow-y-auto pr-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="fixed bottom-6 right-6 bg-zinc-900 text-xs text-zinc-500 px-4 py-2 rounded-2xl flex items-center gap-2">
+        <i class="fas fa-database"></i>
+        <span id="db-status">IndexedDB Ready</span>
+    </div>
+
+    <script>
+        // Database abstraction
+        let db = null;
+        const DB_NAME = 'GroksnookerDB';
+        const STORE_NAME = 'games';
+        
+        async function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 1);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    console.log('IndexedDB initialized');
+                    document.getElementById('db-status').textContent = 'IndexedDB Connected';
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                        store.createIndex('timestamp', 'timestamp', { unique: false });
+                    }
+                };
+            });
+        }
+        
+        // Clean API - can be replaced later
+        const dbAPI = {
+            async saveGame(gameState) {
+                if (!db) return;
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(STORE_NAME, 'readwrite');
+                    const store = tx.objectStore(STORE_NAME);
+                    const request = store.put({
+                        ...gameState,
+                        timestamp: Date.now()
+                    });
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+            
+            async getGames() {
+                if (!db) return [];
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(STORE_NAME, 'readonly');
+                    const store = tx.objectStore(STORE_NAME);
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+            
+            async clearGames() {
+                if (!db) return;
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(STORE_NAME, 'readwrite');
+                    const store = tx.objectStore(STORE_NAME);
+                    const request = store.clear();
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+        };
+        
+        // Game State
+        let gameState = {
+            id: null,
+            player1: { name: 'Player 1', score: 0 },
+            player2: { name: 'Player 2', score: 0 },
+            currentPlayer: 0, // 0 or 1
+            currentBreak: 0,
+            reds: 15,
+            colours: {
+                yellow: 1,
+                green: 1,
+                brown: 1,
+                blue: 1,
+                pink: 1,
+                black: 1
+            },
+            isColourPhase: false,
+            history: [],
+            frameNumber: 1,
+            totalFrames: 1
+        };
+        
+        let lastAction = null;
+        
+        // Ball definitions
+        const balls = [
+            { type: 'red', points: 1, color: 'red', label: '1', count: 15 },
+            { type: 'yellow', points: 2, color: 'yellow', label: '2' },
+            { type: 'green', points: 3, color: 'green', label: '3' },
+            { type: 'brown', points: 4, color: 'brown', label: '4' },
+            { type: 'blue', points: 5, color: 'blue', label: '5' },
+            { type: 'pink', points: 6, color: 'pink', label: '6' },
+            { type: 'black', points: 7, color: 'black', label: '7' }
+        ];
+        
+        function startGame() {
+            const p1Name = document.getElementById('player1-name').value.trim() || 'Player 1';
+            const p2Name = document.getElementById('player2-name').value.trim() || 'Player 2';
+            
+            gameState.player1.name = p1Name;
+            gameState.player2.name = p2Name;
+            gameState.player1.score = 0;
+            gameState.player2.score = 0;
+            gameState.currentPlayer = 0;
+            gameState.currentBreak = 0;
+            gameState.reds = 15;
+            gameState.colours = { yellow:1, green:1, brown:1, blue:1, pink:1, black:1 };
+            gameState.isColourPhase = false;
+            gameState.history = [];
+            gameState.frameNumber = 1;
+            
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            
+            updateUI();
+            renderColours();
+        }
+        
+        function updateUI() {
+            // Player names and scores
+            document.getElementById('player1-name-display').textContent = gameState.player1.name;
+            document.getElementById('player2-name-display').textContent = gameState.player2.name;
+            document.getElementById('player1-score').textContent = gameState.player1.score;
+            document.getElementById('player2-score').textContent = gameState.player2.score;
+            
+            // Current player
+            const currentPlayerEl = document.getElementById('current-player');
+            currentPlayerEl.textContent = gameState.currentPlayer === 0 ? 
+                gameState.player1.name.toUpperCase() : gameState.player2.name.toUpperCase();
+            currentPlayerEl.className = gameState.currentPlayer === 0 ? 
+                'font-mono text-emerald-400' : 'font-mono text-amber-400';
+            
+            document.getElementById('current-break').textContent = gameState.currentBreak;
+            
+            // Reds
+            document.getElementById('reds-count').textContent = gameState.reds;
+            const redProgress = Math.max(0, (gameState.reds / 15) * 100);
+            document.getElementById('reds-progress').style.width = `${redProgress}%`;
+            
+            // Balls remaining
+            const totalColours = Object.values(gameState.colours).reduce((a, b) => a + b, 0);
+            document.getElementById('balls-remaining').textContent = 
+                `${gameState.reds} reds • ${totalColours} colours`;
+            
+            renderHistory();
+        }
+        
+        function renderColours() {
+            const grid = document.getElementById('colours-grid');
+            grid.innerHTML = '';
+            
+            const colourBalls = [
+                {type: 'yellow', points:2, label:'2'},
+                {type: 'green', points:3, label:'3'},
+                {type: 'brown', points:4, label:'4'},
+                {type: 'blue', points:5, label:'5'},
+                {type: 'pink', points:6, label:'6'},
+                {type: 'black', points:7, label:'7'}
+            ];
+            
+            colourBalls.forEach(ball => {
+                const count = gameState.colours[ball.type];
+                if (count <= 0) return;
+                
+                const div = document.createElement('div');
+                div.className = `flex flex-col items-center`;
+                div.innerHTML = `
+                    <div onclick="potBall('${ball.type}', ${ball.points})" 
+                         class="ball ${ball.type} mx-auto mb-2">
+                        ${ball.label}
+                    </div>
+                    <div class="text-xs text-zinc-400 font-mono">${ball.type.toUpperCase()}</div>
+                    <div class="text-xs font-mono text-white">${count}</div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+        
+        function potBall(ballType, points) {
+            if (ballType === 'red' && gameState.reds <= 0) return;
+            
+            // Add to current break
+            gameState.currentBreak += points;
+            
+            // Update score for current player
+            if (gameState.currentPlayer === 0) {
+                gameState.player1.score += points;
+            } else {
+                gameState.player2.score += points;
+            }
+            
+            // Remove ball
+            if (ballType === 'red') {
+                gameState.reds--;
+                if (gameState.reds === 0) {
+                    gameState.isColourPhase = true;
+                }
+            } else {
+                if (!gameState.isColourPhase) {
+                    // In red phase, colours are replaced, so don't remove
+                } else {
+                    gameState.colours[ballType] = 0;
+                }
+            }
+            
+            // Record history
+            const action = {
+                player: gameState.currentPlayer,
+                ball: ballType,
+                points: points,
+                breakScore: gameState.currentBreak,
+                timestamp: Date.now()
+            };
+            
+            gameState.history.push(action);
+            lastAction = action;
+            
+            // Auto switch after red? Keep same player for next shot
+            // For simplicity, stay on same player until manual switch or foul
+            
+            saveGameState();
+            updateUI();
+            renderColours();
+        }
+        
+        function foul(points = 4) {
+            // Foul gives points to opponent
+            const opponent = gameState.currentPlayer === 0 ? 1 : 0;
+            
+            if (opponent === 0) {
+                gameState.player1.score += points;
+            } else {
+                gameState.player2.score += points;
+            }
+            
+            const action = {
+                type: 'foul',
+                player: gameState.currentPlayer,
+                points: points,
+                to: opponent,
+                timestamp: Date.now()
+            };
+            
+            gameState.history.push(action);
+            lastAction = action;
+            
+            // Switch player on foul?
+            switchPlayer(opponent);
+            
+            saveGameState();
+            updateUI();
+        }
+        
+        function switchPlayer(newPlayer) {
+            if (gameState.currentPlayer !== newPlayer) {
+                gameState.currentPlayer = newPlayer;
+                // Optionally reset current break on switch?
+                // In snooker, break continues until miss
+                // For UI, keep it until end break
+            }
+            updateUI();
+        }
+        
+        function endBreak() {
+            // Manual end of break - switch players
+            gameState.currentPlayer = gameState.currentPlayer === 0 ? 1 : 0;
+            gameState.currentBreak = 0;
+            updateUI();
+        }
+        
+        function undoLastAction() {
+            if (!lastAction || gameState.history.length === 0) return;
+            
+            // Simple undo - revert last action
+            const action = gameState.history.pop();
+            
+            if (action.type === 'foul') {
+                // Revert foul points
+                const opponent = action.to;
+                if (opponent === 0) {
+                    gameState.player1.score = Math.max(0, gameState.player1.score - action.points);
+                } else {
+                    gameState.player2.score = Math.max(0, gameState.player2.score - action.points);
+                }
+            } else {
+                // Revert pot
+                gameState.currentBreak = Math.max(0, gameState.currentBreak - action.points);
+                
+                if (gameState.currentPlayer === 0) {
+                    gameState.player1.score = Math.max(0, gameState.player1.score - action.points);
+                } else {
+                    gameState.player2.score = Math.max(0, gameState.player2.score - action.points);
+                }
+                
+                // Restore ball - approximate
+                if (action.ball === 'red') {
+                    gameState.reds = Math.min(15, gameState.reds + 1);
+                } else if (gameState.colours[action.ball] !== undefined) {
+                    gameState.colours[action.ball] = 1;
+                }
+            }
+            
+            lastAction = gameState.history.length > 0 ? gameState.history[gameState.history.length - 1] : null;
+            
+            saveGameState();
+            updateUI();
+            renderColours();
+        }
+        
+        function renderHistory() {
+            const container = document.getElementById('history-list');
+            container.innerHTML = '';
+            
+            if (gameState.history.length === 0) {
+                container.innerHTML = `<div class="text-zinc-500 text-center py-8">No shots yet...</div>`;
+                return;
+            }
+            
+            gameState.history.slice().reverse().forEach((entry, idx) => {
+                const div = document.createElement('div');
+                div.className = 'history-entry flex justify-between items-center bg-zinc-800/50 px-5 py-3 rounded-2xl text-sm';
+                
+                let content = '';
+                
+                if (entry.type === 'foul') {
+                    content = `
+                        <div>
+                            <span class="text-red-400">FOUL</span> 
+                            <span class="text-zinc-400">${gameState.currentPlayer === 0 ? gameState.player1.name : gameState.player2.name}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-mono">+${entry.points}</span> to opponent
+                        </div>
+                    `;
+                } else {
+                    const playerName = entry.player === 0 ? gameState.player1.name : gameState.player2.name;
+                    content = `
+                        <div class="flex items-center gap-3">
+                            <span class="inline-block w-5 h-5 rounded-full ${entry.ball}"></span>
+                            <span>${playerName}</span>
+                        </div>
+                        <div class="font-mono text-emerald-400">+${entry.points}</div>
+                    `;
+                }
+                
+                div.innerHTML = content;
+                container.appendChild(div);
+            });
+        }
+        
+        function clearHistory() {
+            if (confirm('Clear all history for this frame?')) {
+                gameState.history = [];
+                updateUI();
+            }
+        }
+        
+        async function saveGameState() {
+            try {
+                await dbAPI.saveGame(gameState);
+            } catch(e) {
+                console.warn('Failed to save to IndexedDB', e);
+            }
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('game-screen').classList.contains('hidden')) return;
+            
+            if (e.key === 'r' || e.key === 'R') {
+                potBall('red', 1);
+            }
+            if (e.key === 'b' || e.key === 'B') {
+                potBall('black', 7);
+            }
+            if (e.key === 'f' || e.key === 'F') {
+                foul(4);
+            }
+            if (e.key === 'Escape') {
+                endBreak();
+            }
+        });
+        
+        // Initialize
+        async function init() {
+            await initDB();
+            // Load last game if exists? For now, start fresh
+            console.log('Snooker Scorekeeper ready');
+        }
+        
+        window.onload = init;
+        
+        // Expose some functions to window for onclick handlers
+        window.startGame = startGame;
+        window.potBall = potBall;
+        window.foul = foul;
+        window.switchPlayer = switchPlayer;
+        window.endBreak = endBreak;
+        window.undoLastAction = undoLastAction;
+        window.clearHistory = clearHistory;
+    </script>
+</body>
+</html>
