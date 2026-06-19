@@ -1,0 +1,93 @@
+[
+	{
+		"name": "Claude Sonnet 4.6",
+		"file": "claude.sonnet4.6.html",
+		"sizeClass": "XXL",
+		"score": "A",
+		"notes": ""
+	},
+	{
+		"name": "Codex 5.5 Medium",
+		"file": "codex5.5.medium/",
+		"sizeClass": "XXL",
+		"score": "A",
+		"notes": ""
+	},
+	{
+		"name": "Kimi 2.6",
+		"file": "Kimi2.6.html",
+		"sizeClass": "XL",
+		"score": "A",
+		"notes": ""
+	},
+	{
+		"name": "ChatGPT Free",
+		"file": "chatgpt.free.html",
+		"sizeClass": "XL",
+		"score": "C",
+		"notes": "Buggy"
+	},
+	{
+		"name": "Cohere North Mini",
+		"file": "cohere-north-mini-code.html",
+		"sizeClass": "M",
+		"score": "D",
+		"notes": "Broken"
+	},
+	{
+		"name": "DeepSeek Expert",
+		"file": "deepseek.expert.html",
+		"sizeClass": "XL",
+		"score": "A",
+		"notes": ""
+	},
+	{
+		"name": "Gemma 3.1B",
+		"file": "gemma31b.html",
+		"sizeClass": "M",
+		"score": "C",
+		"notes": "Incomplete"
+	},
+	{
+		"name": "GLM 5.2",
+		"file": "glm5.2.html",
+		"sizeClass": "XL",
+		"score": "A",
+		"notes": ""
+	},
+	{
+		"name": "Nemotron 120B (Fixed)",
+		"file": "nemotron-3-super-120b-a12b.fixed.html",
+		"sizeClass": "L",
+		"score": "C",
+		"notes": "Buggy"
+	},
+	{
+		"name": "OpenAI GPT OSS 120B",
+		"file": "openaigpt-oss-120b.html",
+		"sizeClass": "L",
+		"score": "D",
+		"notes": "Buggy"
+	},
+	{
+		"name": "OpenAI GPT OSS 20B",
+		"file": "openaigpt-oss-20b.html",
+		"sizeClass": "M",
+		"score": "F",
+		"notes": "White screen"
+	},
+	{
+		"name": "Owl Alpha",
+		"file": "owlalpha.html",
+		"sizeClass": "XL",
+		"score": "B",
+		"notes": ""
+	},
+	{
+		"name": "Sarvam 120B",
+		"file": "sarvam.txt",
+		"sizeClass": "L",
+		"score": "F",
+		"notes": "truncated output"
+	}
+]
