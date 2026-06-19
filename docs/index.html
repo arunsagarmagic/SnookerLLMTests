@@ -294,8 +294,8 @@
 		}
 		function filterResults(results)
 		{
-			const sf = document.getElementById('scoreFilter').value;
-			const szf = document.getElementById('sizeFilter').value;
+			const sf = document.getElementById('scoreFilter')?.value||"all";
+			const szf = document.getElementById('sizeFilter')?.value||"all";
 			return results.filter(r =>
 			{
 				const sm = sf === 'all' || (sf === 'unscored' && !r.score) || r.score?.toUpperCase() === sf;
