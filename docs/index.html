@@ -240,11 +240,11 @@
 			is coarse
 			grain (A-F).
 		</p>
-		<p>Existing terminology for language model size is:<br />
-			SLM <= 10B, 10B < MLM <=100B, LLM> 100B.</p>
 		<p>
-			Given that we have 1T and larger models, it is useful to extend the terminology: XL <=1T, XXL <=10T, etc.
-				</p>
+			We adopt the following size tiers (log-centered with ~5× range): S (1B), M (10B), L (100B), XL (1T), and XXL (10T).
+			These correspond to on-device, single-GPU, enterprise, cluster-scale, and hyperscale deployments, respectively,
+			capturing natural capability and hardware transitions.
+		</p>
 				<h3>Prompt Used</h3>
 				<blockquote>Build a snooker scoring webapp. Use indexdb for storage, with clean database APIs so that a normal database can be
 				plugged later.
